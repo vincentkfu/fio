@@ -298,9 +298,13 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 	io_u->error = 0;
 	io_u->resid = 0;
 
+	if (fio_fill_issue_time(td))
+		fio_gettime(&io_u->start_time, NULL);
+
 	if (td_ioengine_flagged(td, FIO_SYNCIO)) {
 		if (fio_fill_issue_time(td))
-			fio_gettime(&io_u->issue_time, NULL);
+			memcpy(&io_u->issue_time, &io_u->start_time,
+				sizeof(io_u->issue_time));
 
 		/*
 		 * only used for iolog
