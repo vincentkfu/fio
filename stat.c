@@ -141,6 +141,7 @@ unsigned int calc_clat_percentiles(uint64_t *io_u_plat, unsigned long long nr,
 	unsigned int len, i, j = 0;
 	unsigned long long *ovals = NULL;
 	bool is_last;
+	double delta, target;
 
 	*minv = -1ULL;
 	*maxv = 0;
@@ -164,13 +165,23 @@ unsigned int calc_clat_percentiles(uint64_t *io_u_plat, unsigned long long nr,
 	if (!ovals)
 		return 0;
 
+	dprint(FD_STAT, "\n");
+	dprint(FD_STAT, "calc_clat: nr = %llu\n", nr);
+
 	/*
 	 * Calculate bucket values, note down max and min values
 	 */
 	is_last = false;
 	for (i = 0; i < FIO_IO_U_PLAT_NR && !is_last; i++) {
 		sum += io_u_plat[i];
+		target = plist[j].u.f / 100.0 * nr;
+		delta = target - sum;
+		dprint(FD_STAT, "calc_clat: io_u_plat[%u] = %lu, sum = %llu, delta = %lf, plist[%u].u.f / 100.0 * nr = %lf, sum >= d-target %s, sum >= l-d target %s\n",
+			i, io_u_plat[i], sum, delta, j,  plist[j].u.f / 100.0 * nr, 
+			sum >= target ? "true" : "false",
+			(long double) sum >= (long double) plist[j].u.f / 100.0 * nr ? "true" : "false");
 		while (sum >= (plist[j].u.f / 100.0 * nr)) {
+			dprint(FD_STAT, "calc_clat: top of while loop\n");
 			assert(plist[j].u.f <= 100.0);
 
 			ovals[j] = plat_idx_to_val(i);
@@ -179,12 +190,30 @@ unsigned int calc_clat_percentiles(uint64_t *io_u_plat, unsigned long long nr,
 			if (ovals[j] > *maxv)
 				*maxv = ovals[j];
 
+			dprint(FD_STAT, "calc_clat: ovals[%u] = %llu, len = %u\n", j, ovals[j], len);
 			is_last = (j == len - 1) != 0;
 			if (is_last)
 				break;
 
 			j++;
+			dprint(FD_STAT, "calc_clat: plist[%u].u.f = %lf\n", j, plist[j].u.f);
+			target = plist[j].u.f / 100.0 * nr;
+			delta = target - sum;
+			dprint(FD_STAT, "calc_clat: sum = %llu, delta = %lf, plist[%u].u.f / 100.0 * nr = %lf, sum >= d-target %s, sum >= l-d target %s\n",
+				sum, delta, j, target,
+				sum >= (plist[j].u.f / 100.0 * nr) ? "true" : "false", 
+				(long double) sum >= (long double) plist[j].u.f / 100.0 * nr ? "true" : "false");
 		}
+	}
+
+	if (!is_last) {
+		log_err("fio: error calculating latency percentiles\n");
+		dprint(FD_STAT, "calc_clat: plist[%u].u.f = %30.20lf\n", j, plist[j].u.f);
+		dprint(FD_STAT, "calc_clat: delta = %30.20lf\n", delta);
+		dprint(FD_STAT, "calc_clat: delta > 0 is %s\n", delta > 0.0 ? "true" : "false");
+		dprint(FD_STAT, "calc_clat: sum >= plist[%u].u.f / 100.0 * nr is %s\n", j, sum >= (plist[j].u.f / 100.0 * nr) ? "true" : "false");
+		dprint(FD_STAT, "calc_clat: sum >= target is %s\n", sum >= target ? "true" : "false");
+		dprint(FD_STAT, "calc_clat: target = %30.20lf\n", target);
 	}
 
 	*output = ovals;
