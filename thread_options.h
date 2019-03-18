@@ -200,6 +200,7 @@ struct thread_options {
 	unsigned int mem_align;
 
 	unsigned long long max_latency;
+	unsigned long long min_latency;
 
 	unsigned int stonewall;
 	unsigned int new_group;
@@ -605,6 +606,7 @@ struct thread_options_pack {
 	uint64_t latency_target;
 	uint64_t latency_window;
 	uint64_t max_latency;
+	uint64_t min_latency;
 	fio_fp64_t latency_percentile;
 
 	uint32_t sig_figs;

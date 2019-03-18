@@ -3612,6 +3612,16 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group = FIO_OPT_G_LATPROF,
 	},
 	{
+		.name	= "min_latency",
+		.lname	= "Min Latency (usec)",
+		.type	= FIO_OPT_STR_VAL_TIME,
+		.off1	= offsetof(struct thread_options, min_latency),
+		.help	= "Minimum tolerated IO latency (usec)",
+		.is_time = 1,
+		.category = FIO_OPT_C_IO,
+		.group = FIO_OPT_G_LATPROF,
+	},
+	{
 		.name	= "latency_target",
 		.lname	= "Latency Target (usec)",
 		.type	= FIO_OPT_STR_VAL_TIME,
