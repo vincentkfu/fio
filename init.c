@@ -967,14 +967,6 @@ static int fixup_options(struct thread_data *td)
 	if (o->disable_clat)
 		o->clat_percentiles = 0;
 
-	/*
-	 * Fix these up to be nsec internally
-	 */
-	o->max_latency *= 1000ULL;
-	o->min_latency *= 1000ULL;
-	o->latency_target *= 1000ULL;
-	o->latency_window *= 1000ULL;
-
 	return ret;
 }
 
@@ -2591,7 +2583,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 		case 'E': {
 			long long t = 0;
 
-			if (check_str_time(optarg, &t, 1)) {
+			if (check_str_time(optarg, &t, 1, false)) {
 				log_err("fio: failed parsing eta time %s\n", optarg);
 				exit_val = 1;
 				do_exit++;
@@ -2608,7 +2600,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 		case 'O': {
 			long long t = 0;
 
-			if (check_str_time(optarg, &t, 1)) {
+			if (check_str_time(optarg, &t, 1, false)) {
 				log_err("fio: failed parsing eta interval %s\n", optarg);
 				exit_val = 1;
 				do_exit++;
@@ -2857,7 +2849,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 		case 'L': {
 			long long val;
 
-			if (check_str_time(optarg, &val, 1)) {
+			if (check_str_time(optarg, &val, 1, false)) {
 				log_err("fio: failed parsing time %s\n", optarg);
 				do_exit++;
 				exit_val = 1;
@@ -2892,7 +2884,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			aux_path = strdup(optarg);
 			break;
 		case 'B':
-			if (check_str_time(optarg, &trigger_timeout, 1)) {
+			if (check_str_time(optarg, &trigger_timeout, 1, false)) {
 				log_err("fio: failed parsing time %s\n", optarg);
 				do_exit++;
 				exit_val = 1;

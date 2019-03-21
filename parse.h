@@ -3,6 +3,7 @@
 
 #include <inttypes.h>
 #include "flist.h"
+#include <stdbool.h>
 
 /*
  * Option types
@@ -77,7 +78,8 @@ struct fio_option {
 	uint64_t category;		/* what type of option */
 	uint64_t group;			/* who to group with */
 	void *gui_data;
-	int is_seconds;			/* time value with seconds base */
+	int is_seconds;			/* parsed as sec if units unspecified, otherwise usec */
+	bool internal_nsec;		/* stored internally as nsec, otherwise usec */
 	int is_time;			/* time based value */
 	int no_warn_def;
 	int pow2;			/* must be a power-of-2 */
@@ -99,9 +101,9 @@ extern void options_free(const struct fio_option *, void *);
 
 extern void strip_blank_front(char **);
 extern void strip_blank_end(char *);
-extern int str_to_decimal(const char *, long long *, int, void *, int, int);
+extern int str_to_decimal(const char *, long long *, int, void *, int, bool, int);
 extern int check_str_bytes(const char *p, long long *val, void *data);
-extern int check_str_time(const char *p, long long *val, int);
+extern int check_str_time(const char *p, long long *val, int, bool);
 extern int str_to_float(const char *str, double *val, int is_time);
 
 extern int string_distance(const char *s1, const char *s2);

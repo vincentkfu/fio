@@ -155,12 +155,12 @@ static void show_option_help(const struct fio_option *o, int is_err)
 	show_option_values(o);
 }
 
-static unsigned long long get_mult_time(const char *str, int len,
-					int is_seconds)
+static double get_mult_time(const char *str, int len,
+					int is_seconds, bool internal_nsec)
 {
 	const char *p = str;
 	char *c;
-	unsigned long long mult = 1;
+	double mult = 1.0;
 	int i;
 
 	/*
@@ -173,28 +173,39 @@ static unsigned long long get_mult_time(const char *str, int len,
 	}
 
 	if (!isalpha((int) *p)) {
-		if (is_seconds)
-			return 1000000UL;
-		else
-			return 1;
+		if (is_seconds)	/* default unit is sec */
+			mult = 1000000.0;
+		else		/* default unit is usec */
+			mult = 1.0;
+
+		/* adjust if stored internally as nsec */
+		if (internal_nsec)
+			mult *= 1000.0;
+
+		return mult;
 	}
 
 	c = strdup(p);
 	for (i = 0; i < strlen(c); i++)
 		c[i] = tolower((unsigned char)c[i]);
 
-	if (!strncmp("us", c, 2) || !strncmp("usec", c, 4))
-		mult = 1;
+	if (!strncmp("ns", c, 2) || !strncmp("nsec", c, 4))
+		mult *= 0.001;
+	else if (!strncmp("us", c, 2) || !strncmp("usec", c, 4))
+		mult *= 1.0;
 	else if (!strncmp("ms", c, 2) || !strncmp("msec", c, 4))
-		mult = 1000;
+		mult *= 1000.0;
 	else if (!strcmp("s", c))
-		mult = 1000000;
+		mult *= 1000000.0;
 	else if (!strcmp("m", c))
-		mult = 60 * 1000000UL;
+		mult *= 60 * 1000000.0;
 	else if (!strcmp("h", c))
-		mult = 60 * 60 * 1000000UL;
+		mult *= 60 * 60 * 1000000.0;
 	else if (!strcmp("d", c))
-		mult = 24 * 60 * 60 * 1000000ULL;
+		mult *= 24 * 60 * 60 * 1000000.0;
+
+	if (internal_nsec)
+		mult *= 1000.0;
 
 	free(c);
 	return mult;
@@ -345,7 +356,7 @@ int str_to_float(const char *str, double *val, int is_time)
  * convert string into decimal value, noting any size suffix
  */
 int str_to_decimal(const char *str, long long *val, int kilo, void *data,
-		   int is_seconds, int is_time)
+		   int is_seconds, bool internal_nsec, int is_time)
 {
 	int len, base;
 	int rc = 1;
@@ -393,19 +404,19 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data,
 		else
 			*val *= mult;
 	} else
-		*val *= get_mult_time(str, len, is_seconds);
+		*val *= get_mult_time(str, len, is_seconds, internal_nsec);
 
 	return 0;
 }
 
 int check_str_bytes(const char *p, long long *val, void *data)
 {
-	return str_to_decimal(p, val, 1, data, 0, 0);
+	return str_to_decimal(p, val, 1, data, 0, false, 0);
 }
 
-int check_str_time(const char *p, long long *val, int is_seconds)
+int check_str_time(const char *p, long long *val, int is_seconds, bool internal_nsec)
 {
-	return str_to_decimal(p, val, 0, NULL, is_seconds, 1);
+	return str_to_decimal(p, val, 0, NULL, is_seconds, internal_nsec, 1);
 }
 
 void strip_blank_front(char **p)
@@ -447,7 +458,7 @@ static int check_range_bytes(const char *str, long long *val, void *data)
 {
 	long long __val;
 
-	if (!str_to_decimal(str, &__val, 1, data, 0, 0)) {
+	if (!str_to_decimal(str, &__val, 1, data, 0, false, 0)) {
 		*val = __val;
 		return 0;
 	}
@@ -609,7 +620,7 @@ static int __handle_option(const struct fio_option *o, const char *ptr,
 			*p = '\0';
 
 		if (is_time)
-			ret = check_str_time(tmp, &ull, o->is_seconds);
+			ret = check_str_time(tmp, &ull, o->is_seconds, o->internal_nsec);
 		else
 			ret = check_str_bytes(tmp, &ull, data);
 

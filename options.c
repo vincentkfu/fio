@@ -78,7 +78,7 @@ static int split_parse_ddir(struct thread_options *o, struct split *split,
 			*perc_str = '\0';
 			perc_str++;
 			if (absolute) {
-				if (str_to_decimal(perc_str, &val, 1, o, 0, 0)) {
+				if (str_to_decimal(perc_str, &val, 1, o, 0, false, 0)) {
 					log_err("fio: split conversion failed\n");
 					return 1;
 				}
@@ -97,7 +97,7 @@ static int split_parse_ddir(struct thread_options *o, struct split *split,
 				perc = -1U;
 		}
 
-		if (str_to_decimal(fname, &val, 1, o, 0, 0)) {
+		if (str_to_decimal(fname, &val, 1, o, 0, false, 0)) {
 			log_err("fio: split conversion failed\n");
 			return 1;
 		}
@@ -428,7 +428,7 @@ static int str_rw_cb(void *data, const char *str)
 	else {
 		long long val;
 
-		if (str_to_decimal(nr, &val, 1, o, 0, 0)) {
+		if (str_to_decimal(nr, &val, 1, o, 0, false, 0)) {
 			log_err("fio: rw postfix parsing failed\n");
 			free(nr);
 			return 1;
@@ -1135,7 +1135,7 @@ static int str_steadystate_cb(void *data, const char *str)
 
 		td->o.ss_limit.u.f = val;
 	} else {	/* bandwidth criterion */
-		if (str_to_decimal(nr, &ll, 1, td, 0, 0)) {
+		if (str_to_decimal(nr, &ll, 1, td, 0, false, 0)) {
 			log_err("fio: steadystate BW threshold postfix parsing failed\n");
 			free(nr);
 			return 1;
@@ -3607,6 +3607,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_VAL_TIME,
 		.off1	= offsetof(struct thread_options, max_latency),
 		.help	= "Maximum tolerated IO latency (usec)",
+		.internal_nsec = true,
 		.is_time = 1,
 		.category = FIO_OPT_C_IO,
 		.group = FIO_OPT_G_LATPROF,
@@ -3617,6 +3618,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_VAL_TIME,
 		.off1	= offsetof(struct thread_options, min_latency),
 		.help	= "Minimum tolerated IO latency (usec)",
+		.internal_nsec = true,
 		.is_time = 1,
 		.category = FIO_OPT_C_IO,
 		.group = FIO_OPT_G_LATPROF,
@@ -3627,6 +3629,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_VAL_TIME,
 		.off1	= offsetof(struct thread_options, latency_target),
 		.help	= "Ramp to max queue depth supporting this latency",
+		.internal_nsec = true,
 		.is_time = 1,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_LATPROF,
@@ -3637,6 +3640,7 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.type	= FIO_OPT_STR_VAL_TIME,
 		.off1	= offsetof(struct thread_options, latency_window),
 		.help	= "Time to sustain latency_target",
+		.internal_nsec = true,
 		.is_time = 1,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_LATPROF,
