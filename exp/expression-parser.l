@@ -64,12 +64,16 @@ int lexer_value_is_time = 0; /* for determining if "m" suffix means mega- or min
 			set_suffix_value(yylval, 1024 * 1024, 1024.0 * 1024.0, 0);
 			return SUFFIX;
 		}
-[mM][sS]	{
+([mM][sS])|([mM][sS][eE][cC])		{
 			set_suffix_value(yylval, 1000, 1000.0, 1);
 			return SUFFIX;
 		}
-[uU][sS]	{
+([uU][sS])|([uU][sS][eE][cC])		{
 			set_suffix_value(yylval, 1, 1.0, 1);
+			return SUFFIX;
+		}
+([nN][sS])|([nN][sS][eE][cC])		{
+			set_suffix_value(yylval, 0.001, 0.001, 1);
 			return SUFFIX;
 		}
 [gG]|[Gg][Bb]	{
@@ -102,7 +106,7 @@ int lexer_value_is_time = 0; /* for determining if "m" suffix means mega- or min
 			set_suffix_value(yylval, 1000000000000LL, 1000000000000.0 , 0);
 			return SUFFIX;
 		}
-[sS]		{
+([sS])|([sS][eE][cC])		{
 			set_suffix_value(yylval, 1000000LL, 1000000.0 , 0);
 			return SUFFIX;
 		}
