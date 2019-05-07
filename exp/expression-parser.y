@@ -215,22 +215,19 @@ static void setup_to_parse_string(const char *string)
 }
 
 int evaluate_arithmetic_expression(const char *buffer, long long *ival, double *dval,
-					double implied_units, int is_time)
+					int is_time, int *units_specified)
 {
-	int rc, units_specified = 0, has_error = 0;
+	int rc, has_error = 0;
 
+	*units_specified = 0;
 	lexer_value_is_time = is_time;
 	setup_to_parse_string(buffer);
-	rc = yyparse(ival, dval, &has_error, &units_specified);
+	rc = yyparse(ival, dval, &has_error, units_specified);
 	yyrestart(NULL);
 	if (rc || has_error) {
 		*ival = 0;
 		*dval = 0;
 		has_error = 1;
-	}
-	if (!units_specified) {
-		*ival = (int) ((double) *ival * implied_units);
-		*dval = *dval * implied_units;
 	}
 	return has_error;
 }

@@ -25,11 +25,11 @@
 #include "../y.tab.h"
 
 extern int evaluate_arithmetic_expression(const char *buffer, long long *ival,
-					  double *dval, double implied_units, int is_time);
+					  double *dval, int is_time, int *units_specified);
  
 int main(int argc, char *argv[])
 {
-	int rc, bye = 0;
+	int rc, bye = 0, units_specified;
 	long long result;
 	double dresult;
 	char buffer[100];
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 		rc = strlen(buffer);
 		if (rc > 0 && buffer[rc - 1] == '\n')
 			buffer[rc - 1] = '\0';
-		rc = evaluate_arithmetic_expression(buffer, &result, &dresult, 1.0, 0);
+		rc = evaluate_arithmetic_expression(buffer, &result, &dresult, 0, &units_specified);
 		if (!rc) {
 			printf("%lld (%20.20lf)\n", result, dresult);
 		} else {

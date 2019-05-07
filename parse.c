@@ -328,8 +328,8 @@ static unsigned long long get_mult_bytes(const char *str, int len, void *data,
 }
 
 extern int evaluate_arithmetic_expression(const char *buffer, long long *ival,
-					  double *dval, double implied_units,
-					  int is_time);
+					  double *dval, int is_time,
+					  int *units_specified);
 
 /*
  * Convert string into a floating number. Return 1 for success and 0 otherwise.
@@ -337,12 +337,12 @@ extern int evaluate_arithmetic_expression(const char *buffer, long long *ival,
 int str_to_float(const char *str, double *val, int is_time)
 {
 #ifdef CONFIG_ARITHMETIC
-	int rc;
+	int rc, units_specified;
 	long long ival;
 	double dval;
 
 	if (str[0] == '(') {
-		rc = evaluate_arithmetic_expression(str, &ival, &dval, 1.0, is_time);
+		rc = evaluate_arithmetic_expression(str, &ival, &dval, is_time, &units_specified);
 		if (!rc) {
 			*val = dval;
 			return 1;
@@ -363,7 +363,7 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data,
 #ifdef CONFIG_ARITHMETIC
 	long long ival;
 	double dval;
-	double implied_units = 1.0;
+	int units_specified = 0;
 #endif
 
 	len = strlen(str);
@@ -371,15 +371,20 @@ int str_to_decimal(const char *str, long long *val, int kilo, void *data,
 		return 1;
 
 #ifdef CONFIG_ARITHMETIC
-	if (is_seconds)
-		implied_units = 1000000.0;
-	if (str[0] == '(')
-		rc = evaluate_arithmetic_expression(str, &ival, &dval, implied_units, is_time);
-	if (str[0] == '(' && !rc) {
-		if (!kilo && is_seconds)
-			*val = ival / 1000000LL;
+	if (str[0] == '(') {
+		rc = evaluate_arithmetic_expression(str, &ival, &dval, is_time, &units_specified);
+		if (!rc) {
+			if (!kilo && internal_nsec)
+				*val = dval * 1000;
+			else if (!units_specified && !kilo && is_seconds)
+				*val = ival * 1000000LL;
+			else
+				*val = ival;
+		}
 		else
-			*val = ival;
+			return 1;
+
+		return 0;
 	}
 #endif
 
