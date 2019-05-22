@@ -402,7 +402,7 @@ lexer.h: lex.yy.c
 
 exp/test-expression-parser.o: exp/test-expression-parser.c
 	$(QUIET_CC)$(CC) -o $@ $(CFLAGS) $(CPPFLAGS) -c $<
-exp/test-expression-parser: exp/test-expression-parser.o
+exp/test-expression-parser: exp/test-expression-parser.o y.tab.o lex.yy.o
 	$(QUIET_LINK)$(CC) $(LDFLAGS) $(CFLAGS) $< y.tab.o lex.yy.o -o $@ $(LIBS)
 
 parse.o: lex.yy.o y.tab.o
