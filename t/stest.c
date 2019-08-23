@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 	debug_init();
 
 	do_rand_allocs();
-	smalloc_debug(0);	/* free and total blocks should match */
+	smalloc_debug(0, false);	/* free and total blocks should match */
 
 	scleanup();
 	return 0;
