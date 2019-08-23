@@ -52,7 +52,7 @@ struct block_hdr {
  * This suppresses the voluminous potential bitmap printout when
  * smalloc encounters an OOM error
  */
-static const bool enable_smalloc_debug = false;
+static const bool enable_smalloc_debug = true;
 
 static struct pool *mp;
 static unsigned int nr_pools;
@@ -348,6 +348,8 @@ void sfree(void *ptr)
 
 	if (pool) {
 		sfree_pool(pool, ptr);
+		fprintf(stderr, "sfree: pool=%u, ptr=%p, pool->free_blocks=%u\n",
+			i, ptr, (unsigned int) pool->free_blocks);
 		return;
 	}
 
@@ -492,47 +494,70 @@ static void smalloc_print_bitmap(struct pool *pool)
 			else
 				buffer[SMALLOC_BPI-1-j] = '0';
 
-		log_err("smalloc: bitmap %5u, %s\n", i, buffer);
+		fprintf(stderr, "smalloc: bitmap %5u, %s\n", i, buffer);
 	}
 
 	free(buffer);
 }
 
-void smalloc_debug(size_t size)
+void smalloc_debug(size_t size, bool try)
 {
-	unsigned int i;
+	unsigned int i, free_blocks, total_blocks;
 	size_t alloc_size = size_to_alloc_size(size);
 	size_t alloc_blocks;
 
 	alloc_blocks = size_to_blocks(alloc_size);
 
 	if (size)
-		log_err("smalloc: size = %lu, alloc_size = %lu, blocks = %lu\n",
+		fprintf(stderr, "smalloc: size = %lu, alloc_size = %lu, blocks = %lu\n",
 			(unsigned long) size, (unsigned long) alloc_size,
 			(unsigned long) alloc_blocks);
 	for (i = 0; i < nr_pools; i++) {
-		log_err("smalloc: pool %u, free/total blocks %u/%u\n", i,
-			(unsigned int) (mp[i].free_blocks),
-			(unsigned int) (mp[i].nr_blocks*sizeof(unsigned int)*8));
-		if (size && mp[i].free_blocks >= alloc_blocks) {
+		free_blocks = mp[i].free_blocks;
+		total_blocks = mp[i].nr_blocks*SMALLOC_BPI;
+		fprintf(stderr, "smalloc: pool %u, free/total blocks %u/%u, next_non_full=%u, nr_blocks=%u\n", i,
+			free_blocks, total_blocks, (unsigned int) mp[i].next_non_full,
+			(unsigned int) mp[i].nr_blocks);
+		if (free_blocks < total_blocks)
+			smalloc_print_bitmap(&mp[i]);
+		if (try && size && mp[i].free_blocks >= alloc_blocks) {
 			void *ptr = smalloc_pool(&mp[i], size);
 			if (ptr) {
 				sfree(ptr);
 				last_pool = i;
-				log_err("smalloc: smalloc_pool %u succeeded\n", i);
+				fprintf(stderr, "smalloc: smalloc_pool %u succeeded\n", i);
 			} else {
-				log_err("smalloc: smalloc_pool %u failed\n", i);
-				log_err("smalloc: next_non_full=%u, nr_blocks=%u\n",
-					(unsigned int) mp[i].next_non_full, (unsigned int) mp[i].nr_blocks);
-				smalloc_print_bitmap(&mp[i]);
+				fprintf(stderr, "smalloc: smalloc_pool %u failed\n", i);
 			}
 		}
 	}
 }
 
+#include <execinfo.h>
+void print_trace(char *caller, size_t maxlen)
+{
+	char **strings;
+	size_t i, size;
+	enum Constexpr { MAX_SIZE = 1024 };
+	void *array[MAX_SIZE];
+
+	size = backtrace(array, MAX_SIZE);
+	strings = backtrace_symbols(array, size);
+
+	if (caller)
+		strncpy(caller, strings[2], maxlen);
+	else
+		for (i = 0; i < size; i++)
+			fprintf(stderr, "%s\n", strings[i]);
+
+	free(strings);
+}
+
+#define MAXLEN 128
 void *smalloc(size_t size)
 {
 	unsigned int i, end_pool;
+	char caller[MAXLEN];
 
 	if (size != (unsigned int) size)
 		return NULL;
@@ -545,8 +570,14 @@ void *smalloc(size_t size)
 			void *ptr = smalloc_pool(&mp[i], size);
 
 			if (ptr) {
+				print_trace(caller, MAXLEN-1);
+				fprintf(stderr, "smalloc: size=%u, pool=%u, ptr=%p, caller=%s, free_blocks=%u\n",
+					(unsigned int) size, i, ptr, caller, (unsigned int) mp[i].free_blocks);
 				last_pool = i;
 				return ptr;
+			} else {
+				fprintf(stderr, "smalloc: no space in pool %u\n", i);
+				smalloc_debug(size, false);
 			}
 		}
 		if (last_pool) {
@@ -558,9 +589,9 @@ void *smalloc(size_t size)
 		break;
 	} while (1);
 
-	log_err("smalloc: OOM. Consider using --alloc-size to increase the "
+	fprintf(stderr, "smalloc: OOM. Consider using --alloc-size to increase the "
 		"shared memory available.\n");
-	smalloc_debug(size);
+	smalloc_debug(size, true);
 	return NULL;
 }
 
