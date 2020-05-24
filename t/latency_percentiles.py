@@ -309,7 +309,7 @@ class FioLatTest():
             latencies.sort()
             ptiles = jsondata[lat+'_ns']['percentile']
 
-            for percentile in ptiles.keys():
+            for percentile in list(ptiles.keys()):
                 #
                 # numpy.percentile(latencies, float(percentile),
                 #       interpolation='higher')
@@ -415,8 +415,8 @@ class FioLatTest():
 
         retval = True
 
-        keys = [int(k) for k in jsondata['bins'].keys()]
-        values = [int(jsondata['bins'][k]) for k in jsondata['bins'].keys()]
+        keys = [int(k) for k in list(jsondata['bins'].keys())]
+        values = [int(jsondata['bins'][k]) for k in list(jsondata['bins'].keys())]
         smallest = min(keys)
         biggest = max(keys)
         sampsize = sum(values)
@@ -560,7 +560,7 @@ class FioLatTest():
                 return False
 
             bins = {**jsondata[high]['bins'], **jsondata[low]['bins']}
-            for duration in bins.keys():
+            for duration in list(bins.keys()):
                 if duration in jsondata[high]['bins'] and duration in jsondata[low]['bins']:
                     bins[duration] = jsondata[high]['bins'][duration] + \
                             jsondata[low]['bins'][duration]
@@ -571,7 +571,7 @@ class FioLatTest():
             elif self.debug:
                 print("Number of bins from merged high/low data matches number of overall bins")
 
-            for duration in bins.keys():
+            for duration in list(bins.keys()):
                 if bins[duration] != jsondata[combined]['bins'][duration]:
                     print("Merged high/low count does not match overall count for duration %d" \
                             % duration)

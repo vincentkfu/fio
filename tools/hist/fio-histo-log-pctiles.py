@@ -24,6 +24,7 @@
 import sys, os, math, copy, time
 from copy import deepcopy
 import argparse
+from functools import reduce
 
 unittest2_imported = True
 try:
@@ -82,7 +83,7 @@ def parse_hist_file(logfn, buckets_per_interval, log_hist_msec):
         except ValueError as e:
             raise FioHistoLogExc('non-integer value %s' % exception_suffix(k+1, logfn))
 
-        neg_ints = list(filter( lambda tk : tk < 0, int_tokens ))
+        neg_ints = list([tk for tk in int_tokens if tk < 0])
         if len(neg_ints) > 0:
             raise FioHistoLogExc('negative integer value %s' % exception_suffix(k+1, logfn))
 
@@ -396,7 +397,7 @@ def compute_percentiles_from_logs():
     print('buckets per group = %d' % buckets_per_group)
     buckets_per_interval = buckets_per_group * args.bucket_groups
     print('buckets per interval = %d ' % buckets_per_interval)
-    bucket_index_range = range(0, buckets_per_interval)
+    bucket_index_range = list(range(0, buckets_per_interval))
     if args.log_hist_msec != None:
         print('log_hist_msec = %d' % args.log_hist_msec)
     if args.time_quantum == 0:
@@ -446,7 +447,7 @@ def compute_percentiles_from_logs():
     all_threads_histograms = [ ((j*args.time_quantum*msec_per_sec), deepcopy(zeroed_buckets))
                                for j in range(0, time_interval_count) ]
 
-    for logfn in hist_files.keys():
+    for logfn in list(hist_files.keys()):
         aligned_per_thread = align_histo_log(hist_files[logfn], 
                                              args.time_quantum, 
                                              buckets_per_interval, 
@@ -483,7 +484,7 @@ def compute_percentiles_from_logs():
             for w in args.pctiles_wanted:
                 record += ', '
         else:
-            pct_keys = [ k for k in pct.keys() ]
+            pct_keys = [ k for k in list(pct.keys()) ]
             pct_values = [ str(pct[wanted]/time_divisor) for wanted in sorted(pct_keys) ]
             record += ', '.join(pct_values)
         print(record)
@@ -699,7 +700,7 @@ if unittest2_imported:
         if len(buckets) != len(buckets_expected):
             return False
         compare_buckets = lambda k: self.compare_2_floats(buckets[k], buckets_expected[k])
-        indices_close = list(filter(compare_buckets, range(0, len(buckets))))
+        indices_close = list(filter(compare_buckets, list(range(0, len(buckets)))))
         return len(indices_close) == len(buckets)
 
     def test_d2_align_histo_log_2_quantum(self):

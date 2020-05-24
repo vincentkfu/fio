@@ -4,16 +4,39 @@ EXTRA_CFLAGS="-Werror"
 
 case "$TRAVIS_OS_NAME" in
     "linux")
-        pkgs=(libaio-dev libcunit1 libcunit1-dev libgoogle-perftools4 libibverbs-dev libiscsi-dev libnuma-dev librbd-dev librdmacm-dev libz-dev);
+	# Architecture-dependent packages.
+        pkgs=(
+            libaio-dev
+            libcunit1
+            libcunit1-dev
+            libgoogle-perftools4
+            libibverbs-dev
+            libiscsi-dev
+            libnuma-dev
+            librbd-dev
+            librdmacm-dev
+            libz-dev
+        );
         if [[ "$BUILD_ARCH" == "x86" ]]; then
             pkgs=("${pkgs[@]/%/:i386}");
-            pkgs+=(gcc-multilib python3-scipy);
+            pkgs+=(gcc-multilib);
             EXTRA_CFLAGS="${EXTRA_CFLAGS} -m32";
         else
-            pkgs+=(glusterfs-common python3-scipy);
+            pkgs+=(glusterfs-common);
         fi;
+	# Architecture-independent packages.
+        pkgs+=(
+            python3-six
+            python3-scipy
+        );
         sudo apt-get -qq update;
         sudo apt-get install --no-install-recommends -qq -y "${pkgs[@]}";
+        if sudo apt-get install --no-install-recommends -qq -y "python3"; then
+	    sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 50
+	else
+            sudo apt-get install --no-install-recommends -qq -y "python2";
+        fi;
+        echo "Python version: $(/usr/bin/python -V 2>&1)";
 	;;
     "osx")
         brew update
