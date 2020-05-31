@@ -39,9 +39,10 @@ case "$TRAVIS_OS_NAME" in
         echo "Python version: $(/usr/bin/python -V 2>&1)";
 	;;
     "osx")
+        echo "Python version: $(/usr/bin/python -V 2>&1)";
         brew update
         brew install cunit
-        pip3 install scipy
+        pip3 install scipy six
 	;;
 esac
 
@@ -51,5 +52,5 @@ esac
     if [[ "$TRAVIS_CPU_ARCH" == "arm64" ]]; then
         sudo python3 t/run-fio-tests.py --skip 6 1007 1008 --debug -p 1010:"--skip 15 16 17 18 19 20"
     else
-        sudo python3 t/run-fio-tests.py --skip 6 1007 1008 --debug
+        sudo python3 t/run-fio-tests.py --skip 6 1007 1008 --debug --run-only 1011
     fi
