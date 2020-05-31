@@ -103,7 +103,7 @@ def check(jsondata, parameters, block, qd, qdbatch, rw):
             else:
                 qdkey = str(qd)
             assert iodepth[qdkey] > 99
-            assert submit[batchkey] == 100.0
+            assert submit[batchkey] > 99
             assert complete[batchkey] > 99
     except AssertionError:
         print("Assertion failed")
@@ -118,9 +118,10 @@ def runalltests(args, qd, batch):
     block = False
     for dev in [args.chardev, args.blockdev]:
         for rw in ["randread", "randwrite", "randtrim"]:
-            parameters = ["--name=test",
+            parameters = ["--max-jobs=4",
+                           "--name=test",
                            "--time_based",
-                           "--runtime=30s",
+                           "--runtime=3s",
                            "--output-format=json",
                            "--ioengine=sg",
                            "--rw={0}".format(rw),
@@ -137,9 +138,10 @@ def runalltests(args, qd, batch):
 
 
 def runcdevtrimtest(args, qd, batch):
-    parameters = ["--name=test",
+    parameters = ["--max-jobs=4",
+                   "--name=test",
                    "--time_based",
-                   "--runtime=30s",
+                   "--runtime=3s",
                    "--output-format=json",
                    "--ioengine=sg",
                    "--rw=randtrim",
