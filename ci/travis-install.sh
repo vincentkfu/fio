@@ -38,6 +38,7 @@ case "$TRAVIS_OS_NAME" in
 	brew update
 	brew install cunit
 	pip3 install scipy
+	pip install six
 	;;
 esac
 
