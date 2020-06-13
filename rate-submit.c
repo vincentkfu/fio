@@ -15,22 +15,20 @@ static void check_overlap(struct io_u *io_u)
 	struct thread_data *td;
 	bool overlap = false;
 
+	/*
+	 * Allow only one thread to check for overlap at a time to prevent two
+	 * threads from thinking the coast is clear and then submitting IOs
+	 * that overlap with each other.
+	 *
+	 * If an overlap is found, release the lock and re-acquire it before
+	 * checking again to give other threads a chance to make progress.
+	 *
+	 * If an overlap is not found, release the lock when the io_u's
+	 * IO_U_F_FLIGHT flag is set so that this io_u can be checked by other
+	 * threads as they assess overlap.
+	 */
+	pthread_mutex_lock(&overlap_check);
 	do {
-		/*
-		 * Allow only one thread to check for overlap at a
-		 * time to prevent two threads from thinking the coast
-		 * is clear and then submitting IOs that overlap with
-		 * each other
-		 *
-		 * If an overlap is found, release the lock and
-		 * re-acquire it before checking again to give other
-		 * threads a chance to make progress
-		 *
-		 * If an overlap is not found, release the lock when the
-		 * io_u's IO_U_F_FLIGHT flag is set so that this io_u
-		 * can be checked by other threads as they assess overlap
-		 */
-		pthread_mutex_lock(&overlap_check);
 		for_each_td(td, i) {
 			if (td->runstate <= TD_SETTING_UP ||
 				td->runstate >= TD_FINISHING ||
@@ -41,6 +39,7 @@ static void check_overlap(struct io_u *io_u)
 			overlap = in_flight_overlap(&td->io_u_all, io_u);
 			if (overlap) {
 				pthread_mutex_unlock(&overlap_check);
+				pthread_mutex_lock(&overlap_check);
 				break;
 			}
 		}
