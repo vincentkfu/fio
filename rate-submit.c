@@ -28,9 +28,10 @@ static void check_overlap(struct io_u *io_u)
 	 * IO_U_F_FLIGHT flag is set so that this io_u can be checked by other
 	 * threads as they assess overlap.
 	 */
-	res = pthread_mutex_lock(&overlap_check);
-	assert(res == 0);
 	do {
+		overlap = false;
+		res = pthread_mutex_lock(&overlap_check);
+		assert(res == 0);
 		for_each_td(td, i) {
 			if (td->runstate <= TD_SETTING_UP ||
 				td->runstate >= TD_FINISHING ||
@@ -42,8 +43,7 @@ static void check_overlap(struct io_u *io_u)
 			if (overlap) {
 				res = pthread_mutex_unlock(&overlap_check);
 				assert(res == 0);
-				res = pthread_mutex_lock(&overlap_check);
-				assert(res == 0);
+				printf("overlap found!\n");
 				break;
 			}
 		}

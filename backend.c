@@ -68,6 +68,7 @@ int temp_stall_ts;
 unsigned long done_secs = 0;
 #ifdef PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
 pthread_mutex_t overlap_check = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+#pragma message "PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP is defined"
 #else
 pthread_mutex_t overlap_check = PTHREAD_MUTEX_INITIALIZER;
 #endif

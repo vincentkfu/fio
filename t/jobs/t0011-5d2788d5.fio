@@ -7,13 +7,11 @@
 bs=4k
 ioengine=null
 size=100g
-runtime=3
-flow_id=1
-
-[flow1]
-flow=-8
-rate_iops=1000
+runtime=10
+io_submit_mode=offload
 serialize_overlap=1
+numjobs=64
+group_reporting=1
 
-[flow2]
-flow=1
+[flow]
+
