@@ -13,6 +13,7 @@ flow_id=1
 [flow1]
 flow=-8
 rate_iops=1000
+serialize_overlap=1
 
 [flow2]
 flow=1
