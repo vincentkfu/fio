@@ -66,7 +66,11 @@ unsigned int stat_number = 0;
 int shm_id = 0;
 int temp_stall_ts;
 unsigned long done_secs = 0;
+#ifdef PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
+pthread_mutex_t overlap_check = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+#else
 pthread_mutex_t overlap_check = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 #define JOB_START_TIMEOUT	(5 * 1000)
 
@@ -1860,11 +1864,15 @@ static void *thread_main(void *data)
 	 * offload mode so that we don't clean up this job while
 	 * another thread is checking its io_u's for overlap
 	 */
-	if (td_offload_overlap(td))
-		pthread_mutex_lock(&overlap_check);
+	if (td_offload_overlap(td)) {
+		int res = pthread_mutex_lock(&overlap_check);
+		assert(res == 0);
+	}
 	td_set_runstate(td, TD_FINISHING);
-	if (td_offload_overlap(td))
-		pthread_mutex_unlock(&overlap_check);
+	if (td_offload_overlap(td)) {
+		int res = pthread_mutex_unlock(&overlap_check);
+		assert(res == 0);
+	}
 
 	update_rusage_stat(td);
 	td->ts.total_run_time = mtime_since_now(&td->epoch);
