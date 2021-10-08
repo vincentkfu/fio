@@ -327,6 +327,7 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 {
 	const enum fio_ddir ddir = acct_ddir(io_u);
 	unsigned long long buflen = io_u->xfer_buflen;
+	unsigned long long _buflen;
 	enum fio_q_status ret;
 
 	dprint_io_u(io_u, "queue");
@@ -372,11 +373,13 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 
 	if (ddir_rw(ddir)) {
+		_buflen = buflen;
+
 		if (!(io_u->flags & IO_U_F_VER_LIST)) {
 			td->io_issues[ddir]++;
-			td->io_issue_bytes[ddir] += buflen;
+			td->io_issue_bytes[ddir] += _buflen;
 		}
-		td->rate_io_issue_bytes[ddir] += buflen;
+		td->rate_io_issue_bytes[ddir] += _buflen;
 	}
 
 	ret = td->io_ops->queue(td, io_u);
@@ -386,8 +389,8 @@ enum fio_q_status td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	if (ret == FIO_Q_BUSY && ddir_rw(ddir)) {
 		td->io_issues[ddir]--;
-		td->io_issue_bytes[ddir] -= buflen;
-		td->rate_io_issue_bytes[ddir] -= buflen;
+		td->io_issue_bytes[ddir] -= _buflen;
+		td->rate_io_issue_bytes[ddir] -= _buflen;
 		io_u_clear(td, io_u, IO_U_F_FLIGHT);
 	}
 
