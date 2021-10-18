@@ -605,7 +605,8 @@ extern bool eta_time_within_slack(unsigned int time);
 static inline void fio_ro_check(const struct thread_data *td, struct io_u *io_u)
 {
 	assert(!(io_u->ddir == DDIR_WRITE && !td_write(td)) &&
-	       !(io_u->ddir == DDIR_TRIM && !td_trim(td)));
+	       !(io_u->ddir == DDIR_TRIM && !td_trim(td)) &&
+	       !(io_u->ddir == DDIR_COPY && !td_copy(td)));
 }
 
 static inline bool should_fsync(struct thread_data *td)
