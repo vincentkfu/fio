@@ -101,6 +101,7 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->serialize_overlap = le32_to_cpu(top->serialize_overlap);
 	o->size = le64_to_cpu(top->size);
 	o->io_size = le64_to_cpu(top->io_size);
+	o->num_range = le32_to_cpu(top->num_range);
 	o->size_percent = le32_to_cpu(top->size_percent);
 	o->io_size_percent = le32_to_cpu(top->io_size_percent);
 	o->fill_device = le32_to_cpu(top->fill_device);
@@ -110,6 +111,8 @@ void convert_thread_options_to_cpu(struct thread_options *o,
 	o->start_offset = le64_to_cpu(top->start_offset);
 	o->start_offset_align = le64_to_cpu(top->start_offset_align);
 	o->start_offset_percent = le32_to_cpu(top->start_offset_percent);
+	o->dest_offset = le64_to_cpu(top->dest_offset);
+	o->dest_offset_percent = le32_to_cpu(top->dest_offset_percent);
 
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		o->bs[i] = le64_to_cpu(top->bs[i]);
@@ -569,6 +572,7 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 
 	top->size = __cpu_to_le64(o->size);
 	top->io_size = __cpu_to_le64(o->io_size);
+	top->num_range = __cpu_to_le32(o->num_range);
 	top->verify_backlog = __cpu_to_le64(o->verify_backlog);
 	top->start_delay = __cpu_to_le64(o->start_delay);
 	top->start_delay_high = __cpu_to_le64(o->start_delay_high);
@@ -592,6 +596,8 @@ void convert_thread_options_to_net(struct thread_options_pack *top,
 	top->start_offset = __cpu_to_le64(o->start_offset);
 	top->start_offset_align = __cpu_to_le64(o->start_offset_align);
 	top->start_offset_percent = __cpu_to_le32(o->start_offset_percent);
+	top->dest_offset = __cpu_to_le64(o->dest_offset);
+	top->dest_offset_percent = __cpu_to_le32(o->dest_offset_percent);
 	top->trim_backlog = __cpu_to_le64(o->trim_backlog);
 	top->offset_increment_percent = __cpu_to_le32(o->offset_increment_percent);
 	top->offset_increment = __cpu_to_le64(o->offset_increment);
