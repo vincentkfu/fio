@@ -1521,14 +1521,14 @@ I/O type
 	is given, it'll apply to all of them. This goes for both **zoned**
 	**zoned_abs** distributions.
 
-.. option:: percentage_random=int[,int][,int]
+.. option:: percentage_random=int[,int][,int][,int]
 
 	For a random workload, set how big a percentage should be random. This
 	defaults to 100%, in which case the workload is fully random. It can be set
 	from anywhere from 0 to 100.  Setting it to 0 would make the workload fully
 	sequential. Any setting in between will result in a random mix of sequential
 	and random I/O, at the given percentages.  Comma-separated values may be
-	specified for reads, writes, and trims as described in :option:`blocksize`.
+	specified for reads, writes, trims, and copies as described in :option:`blocksize`.
 
 .. option:: norandommap
 
@@ -1575,38 +1575,40 @@ I/O type
 Block size
 ~~~~~~~~~~
 
-.. option:: blocksize=int[,int][,int], bs=int[,int][,int]
+.. option:: blocksize=int[,int][,int][,int], bs=int[,int][,int][,int]
 
 	The block size in bytes used for I/O units. Default: 4096.  A single value
-	applies to reads, writes, and trims.  Comma-separated values may be
-	specified for reads, writes, and trims.  A value not terminated in a comma
-	applies to subsequent types.
+	applies to reads, writes, trims, and copies.  Comma-separated values may be
+	specified for reads, writes, trims, and copies.  A value not terminated in
+        a comma applies to subsequent types.
 
 	Examples:
 
 		**bs=256k**
-			means 256k for reads, writes and trims.
+			means 256k for reads, writes, trims, and copies
 
 		**bs=8k,32k**
-			means 8k for reads, 32k for writes and trims.
+			means 8k for reads, 32k for writes, trims, and copies.
 
 		**bs=8k,32k,**
-			means 8k for reads, 32k for writes, and default for trims.
+                        means 8k for reads, 32k for writes, and default for
+                        trims and copies.
 
 		**bs=,8k**
-			means default for reads, 8k for writes and trims.
+			means default for reads, 8k for writes, trims, and copies.
 
 		**bs=,8k,**
-			means default for reads, 8k for writes, and default for trims.
+                        means default for reads, 8k for writes, and default for
+                        trims and copies
 
-.. option:: blocksize_range=irange[,irange][,irange], bsrange=irange[,irange][,irange]
+.. option:: blocksize_range=irange[,irange][,irange][,irange], bsrange=irange[,irange][,irange][,irange]
 
 	A range of block sizes in bytes for I/O units.  The issued I/O unit will
 	always be a multiple of the minimum size, unless
 	:option:`blocksize_unaligned` is set.
 
-	Comma-separated ranges may be specified for reads, writes, and trims as
-	described in :option:`blocksize`.
+        Comma-separated ranges may be specified for reads, writes, trims, and
+        copies as described in :option:`blocksize`.
 
 	Example: ``bsrange=1k-4k,2k-8k``.
 
@@ -1659,14 +1661,14 @@ Block size
 	will use the WRITE blocksize settings, and any sequential read or write will
 	use the READ blocksize settings.
 
-.. option:: blockalign=int[,int][,int], ba=int[,int][,int]
+.. option:: blockalign=int[,int][,int][,int], ba=int[,int][,int][,int]
 
 	Boundary to which fio will align random I/O units.  Default:
 	:option:`blocksize`.  Minimum alignment is typically 512b for using direct
 	I/O, though it usually depends on the hardware block size. This option is
 	mutually exclusive with using a random map for files, so it will turn off
-	that option.  Comma-separated values may be specified for reads, writes, and
-	trims as described in :option:`blocksize`.
+	that option.  Comma-separated values may be specified for reads, writes,
+	trims, and copies as described in :option:`blocksize`.
 
 
 Buffers and memory
@@ -3150,37 +3152,37 @@ I/O rate
 	:option:`thinktime` stall is repeated after :option:`thinktime_iotime`
 	or after :option:`thinktime_blocks` IOs, whichever happens first.
 
-.. option:: rate=int[,int][,int]
+.. option:: rate=int[,int][,int][,int]
 
 	Cap the bandwidth used by this job. The number is in bytes/sec, the normal
 	suffix rules apply.  Comma-separated values may be specified for reads,
-	writes, and trims as described in :option:`blocksize`.
+	writes, trims, and copies as described in :option:`blocksize`.
 
 	For example, using `rate=1m,500k` would limit reads to 1MiB/sec and writes to
 	500KiB/sec.  Capping only reads or writes can be done with `rate=,500k` or
 	`rate=500k,` where the former will only limit writes (to 500KiB/sec) and the
 	latter will only limit reads.
 
-.. option:: rate_min=int[,int][,int]
+.. option:: rate_min=int[,int][,int][,int]
 
 	Tell fio to do whatever it can to maintain at least this bandwidth. Failing
 	to meet this requirement will cause the job to exit.  Comma-separated values
-	may be specified for reads, writes, and trims as described in
+	may be specified for reads, writes, trims, and copies as described in
 	:option:`blocksize`.
 
-.. option:: rate_iops=int[,int][,int]
+.. option:: rate_iops=int[,int][,int][,int]
 
 	Cap the bandwidth to this number of IOPS. Basically the same as
 	:option:`rate`, just specified independently of bandwidth. If the job is
 	given a block size range instead of a fixed value, the smallest block size
 	is used as the metric.  Comma-separated values may be specified for reads,
-	writes, and trims as described in :option:`blocksize`.
+	writes, trims, and copies as described in :option:`blocksize`.
 
 .. option:: rate_iops_min=int[,int][,int]
 
 	If fio doesn't meet this rate of I/O, it will cause the job to exit.
-	Comma-separated values may be specified for reads, writes, and trims as
-	described in :option:`blocksize`.
+	Comma-separated values may be specified for reads, writes, trims, and copies
+        as described in :option:`blocksize`.
 
 .. option:: rate_process=str
 

@@ -1328,13 +1328,13 @@ zones for reads, writes, and trims. If just one set is given, it'll apply to
 all of them.
 .RE
 .TP
-.BI percentage_random \fR=\fPint[,int][,int]
+.BI percentage_random \fR=\fPint[,int][,int][,int]
 For a random workload, set how big a percentage should be random. This
 defaults to 100%, in which case the workload is fully random. It can be set
 from anywhere from 0 to 100. Setting it to 0 would make the workload fully
 sequential. Any setting in between will result in a random mix of sequential
 and random I/O, at the given percentages. Comma-separated values may be
-specified for reads, writes, and trims as described in \fBblocksize\fR.
+specified for reads, writes, trims, and copies as described in \fBblocksize\fR.
 .TP
 .BI norandommap
 Normally fio will cover every block of the file when doing random I/O. If
@@ -1381,33 +1381,33 @@ selected automatically.
 .RE
 .SS "Block size"
 .TP
-.BI blocksize \fR=\fPint[,int][,int] "\fR,\fB bs" \fR=\fPint[,int][,int]
+.BI blocksize \fR=\fPint[,int][,int][,int] "\fR,\fB bs" \fR=\fPint[,int][,int][,int]
 The block size in bytes used for I/O units. Default: 4096. A single value
-applies to reads, writes, and trims. Comma-separated values may be
-specified for reads, writes, and trims. A value not terminated in a comma
+applies to reads, writes, trims, and copies. Comma-separated values may be
+specified for reads, writes, trims, and copies. A value not terminated in a comma
 applies to subsequent types. Examples:
 .RS
 .RS
 .P
 .PD 0
-bs=256k        means 256k for reads, writes and trims.
+bs=256k        means 256k for reads, writes, trims, and copies.
 .P
-bs=8k,32k      means 8k for reads, 32k for writes and trims.
+bs=8k,32k      means 8k for reads, 32k for writes, trims and copies.
 .P
-bs=8k,32k,     means 8k for reads, 32k for writes, and default for trims.
+bs=8k,32k,     means 8k for reads, 32k for writes, default for trims and copies.
 .P
-bs=,8k         means default for reads, 8k for writes and trims.
+bs=,8k         means default for reads, 8k for writes, trims, and copies.
 .P
-bs=,8k,        means default for reads, 8k for writes, and default for trims.
+bs=,8k,        means default for reads, 8k for writes, default for trims and copies.
 .PD
 .RE
 .RE
 .TP
-.BI blocksize_range \fR=\fPirange[,irange][,irange] "\fR,\fB bsrange" \fR=\fPirange[,irange][,irange]
+.BI blocksize_range \fR=\fPirange[,irange][,irange][,irange] "\fR,\fB bsrange" \fR=\fPirange[,irange][,irange][,irange]
 A range of block sizes in bytes for I/O units. The issued I/O unit will
 always be a multiple of the minimum size, unless
 \fBblocksize_unaligned\fR is set.
-Comma-separated ranges may be specified for reads, writes, and trims as
+Comma-separated ranges may be specified for reads, writes, trims, and copies as
 described in \fBblocksize\fR. Example:
 .RS
 .RS
@@ -1469,13 +1469,13 @@ as sequential,random blocksize settings instead. Any random read or write
 will use the WRITE blocksize settings, and any sequential read or write will
 use the READ blocksize settings.
 .TP
-.BI blockalign \fR=\fPint[,int][,int] "\fR,\fB ba" \fR=\fPint[,int][,int]
+.BI blockalign \fR=\fPint[,int][,int][,int] "\fR,\fB ba" \fR=\fPint[,int][,int][,int]
 Boundary to which fio will align random I/O units. Default:
 \fBblocksize\fR. Minimum alignment is typically 512b for using direct
 I/O, though it usually depends on the hardware block size. This option is
 mutually exclusive with using a random map for files, so it will turn off
-that option. Comma-separated values may be specified for reads, writes, and
-trims as described in \fBblocksize\fR.
+that option. Comma-separated values may be specified for reads, writes, trims,
+and copies as described in \fBblocksize\fR.
 .SS "Buffers and memory"
 .TP
 .BI zero_buffers
@@ -2898,10 +2898,10 @@ stall is repeated after \fBthinktime_iotime\fR or after \fBthinktime_blocks\fR
 IOs, whichever happens first.
 
 .TP
-.BI rate \fR=\fPint[,int][,int]
+.BI rate \fR=\fPint[,int][,int][,int]
 Cap the bandwidth used by this job. The number is in bytes/sec, the normal
 suffix rules apply. Comma-separated values may be specified for reads,
-writes, and trims as described in \fBblocksize\fR.
+writes, trims, and copies as described in \fBblocksize\fR.
 .RS
 .P
 For example, using `rate=1m,500k' would limit reads to 1MiB/sec and writes to
@@ -2910,22 +2910,22 @@ For example, using `rate=1m,500k' would limit reads to 1MiB/sec and writes to
 latter will only limit reads.
 .RE
 .TP
-.BI rate_min \fR=\fPint[,int][,int]
+.BI rate_min \fR=\fPint[,int][,int][,int]
 Tell fio to do whatever it can to maintain at least this bandwidth. Failing
 to meet this requirement will cause the job to exit. Comma-separated values
-may be specified for reads, writes, and trims as described in
+may be specified for reads, writes, trims, and copies as described in
 \fBblocksize\fR.
 .TP
-.BI rate_iops \fR=\fPint[,int][,int]
+.BI rate_iops \fR=\fPint[,int][,int][,int]
 Cap the bandwidth to this number of IOPS. Basically the same as
 \fBrate\fR, just specified independently of bandwidth. If the job is
 given a block size range instead of a fixed value, the smallest block size
 is used as the metric. Comma-separated values may be specified for reads,
-writes, and trims as described in \fBblocksize\fR.
+writes, trims, and copies as described in \fBblocksize\fR.
 .TP
-.BI rate_iops_min \fR=\fPint[,int][,int]
+.BI rate_iops_min \fR=\fPint[,int][,int][,int]
 If fio doesn't meet this rate of I/O, it will cause the job to exit.
-Comma-separated values may be specified for reads, writes, and trims as
+Comma-separated values may be specified for reads, writes, trims, and copies as
 described in \fBblocksize\fR.
 .TP
 .BI rate_process \fR=\fPstr
