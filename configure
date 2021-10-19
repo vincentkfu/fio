@@ -646,6 +646,24 @@ fi
 print_config "zlib" "$zlib"
 
 ##########################################
+# sctl probe
+if test "$sctl" != "yes" ; then
+  sctl="no"
+fi
+cat > $TMPC <<EOF
+#include <linux/fs.h>
+int main(void)
+{
+  struct copy_range cr;
+  return 0;
+}
+EOF
+if compile_prog "" "" "sctl" ; then
+  sctl=yes
+fi
+print_config "Sctl support" "$sctl"
+
+##########################################
 # linux-aio probe
 if test "$libaio" != "yes" ; then
   libaio="no"
@@ -2845,6 +2863,9 @@ else
 fi
 if test "$zlib" = "yes" ; then
   output_sym "CONFIG_ZLIB"
+fi
+if test "$sctl" = "yes" ; then
+  output_sym "CONFIG_SCTL"
 fi
 if test "$libaio" = "yes" ; then
   output_sym "CONFIG_LIBAIO"

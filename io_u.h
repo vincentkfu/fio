@@ -133,6 +133,9 @@ struct io_u {
 #ifdef CONFIG_RDMA
 		struct ibv_mr *mr;
 #endif
+#ifdef CONFIG_SCTL
+		struct copy_range cr;
+#endif
 		void *mmap_data;
 	};
 };

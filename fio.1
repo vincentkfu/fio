@@ -1781,6 +1781,10 @@ I/O. Requires \fBfilename\fR option to specify either block or
 character devices. This engine supports trim operations. The
 sg engine includes engine specific options.
 .TP
+.B sctl
+Synchronous ioengine. This engine only supports `rw=copy' and
+`rw=randcopy' operations. The target should be a block device file.
+.TP
 .B libzbc
 Read, write, trim and ZBC/ZAC operations to a zoned block device using
 \fBlibzbc\fR library. The target can be either an SG character device or

@@ -1993,6 +1993,10 @@ I/O engine
 			block device using libzbc library. The target can be
 			either an SG character device or a block device file.
 
+		**sctl**
+			Synchronous ioengine. This engine only supports option ``rw=copy`` and
+			``rw=randcopy`` operations. The target should be a block device file.
+
 		**null**
 			Doesn't transfer any data, just pretends to.  This is mainly used to
 			exercise fio itself and for debugging/testing purposes.

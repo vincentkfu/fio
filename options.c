@@ -1947,6 +1947,11 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .help = "SCSI generic v3 IO",
 			  },
 #endif
+#ifdef CONFIG_SCTL
+			  { .ival = "sctl",
+			    .help = "Simple copy IO engine",
+			  },
+#endif
 			  { .ival = "null",
 			    .help = "Testing engine (no data transfer)",
 			  },
