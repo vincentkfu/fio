@@ -697,6 +697,10 @@ store_option_value:
 					if (o->off3)
 						val_store(ilp, ull, o->off3, 0, data, o);
 				}
+				if (curr == 3) {
+					if (o->off4)
+						val_store(ilp, ull, o->off4, 0, data, o);
+				}
 				if (!more) {
 					if (curr < 1) {
 						if (o->off2)
@@ -705,6 +709,10 @@ store_option_value:
 					if (curr < 2) {
 						if (o->off3)
 							val_store(ilp, ull, o->off3, 0, data, o);
+					}
+					if (curr < 3) {
+						if (o->off4)
+							val_store(ilp, ull, o->off4, 0, data, o);
 					}
 				}
 			} else if (o->type == FIO_OPT_ULL) {
@@ -718,6 +726,10 @@ store_option_value:
 					if (o->off3)
 						val_store(ullp, ull, o->off3, 0, data, o);
 				}
+				if (curr == 3) {
+					if (o->off4)
+						val_store(ullp, ull, o->off4, 0, data, o);
+				}
 				if (!more) {
 					if (curr < 1) {
 						if (o->off2)
@@ -726,6 +738,10 @@ store_option_value:
 					if (curr < 2) {
 						if (o->off3)
 							val_store(ullp, ull, o->off3, 0, data, o);
+					}
+					if (curr < 3) {
+						if (o->off4)
+							val_store(ullp, ull, o->off4, 0, data, o);
 					}
 				}
 			} else {
@@ -912,6 +928,12 @@ store_option_value:
 					val_store(ullp, ull2, o->off6, 0, data, o);
 				}
 			}
+			if (curr == 3) {
+				if (o->off7 && o->off8) {
+					val_store(ullp, ull1, o->off7, 0, data, o);
+					val_store(ullp, ull2, o->off8, 0, data, o);
+				}
+			}
 			if (!more) {
 				if (curr < 1) {
 					if (o->off3 && o->off4) {
@@ -923,6 +945,12 @@ store_option_value:
 					if (o->off5 && o->off6) {
 						val_store(ullp, ull1, o->off5, 0, data, o);
 						val_store(ullp, ull2, o->off6, 0, data, o);
+					}
+				}
+				if (curr < 3) {
+					if (o->off7 && o->off8) {
+						val_store(ullp, ull1, o->off7, 0, data, o);
+						val_store(ullp, ull2, o->off8, 0, data, o);
 					}
 				}
 			}
