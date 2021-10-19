@@ -82,6 +82,11 @@ static void check_str_update(struct thread_data *td)
 				c = 'w';
 			else
 				c = 'W';
+		} else if (td_copy(td)) {
+			if (td_random(td))
+				c = 'q';
+			else
+				c = 'Q';
 		} else {
 			if (td_random(td))
 				c = 'd';
@@ -292,6 +297,8 @@ static unsigned long thread_eta(struct thread_data *td)
 			rate_bytes += td->o.rate[DDIR_WRITE];
 		if (td_trim(td))
 			rate_bytes += td->o.rate[DDIR_TRIM];
+		if (td_copy(td))
+			rate_bytes += td->o.rate[DDIR_COPY];
 
 		if (rate_bytes) {
 			r_eta = bytes_total / rate_bytes;
@@ -445,6 +452,12 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 				je->m_rate[2] += td->o.ratemin[DDIR_TRIM];
 				je->m_iops[2] += td->o.rate_iops_min[DDIR_TRIM];
 			}
+			if (td_copy(td)) {
+				je->t_rate[3] += td->o.rate[DDIR_COPY];
+				je->t_iops[3] += td->o.rate_iops[DDIR_COPY];
+				je->m_rate[3] += td->o.ratemin[DDIR_COPY];
+				je->m_iops[3] += td->o.rate_iops_min[DDIR_COPY];
+			}
 
 			je->files_open += td->nr_open_files;
 		} else if (td->runstate == TD_RAMP) {
@@ -535,7 +548,7 @@ bool calc_thread_status(struct jobs_eta *je, int force)
 static int gen_eta_str(struct jobs_eta *je, char *p, size_t left,
 		       char **rate_str, char **iops_str)
 {
-	static const char c[DDIR_RWDIR_CNT] = {'r', 'w', 't'};
+	static const char c[DDIR_RWDIR_CNT] = {'r', 'w', 't', 'c'};
 	bool has[DDIR_RWDIR_CNT];
 	bool has_any = false;
 	const char *sep;
@@ -595,23 +608,23 @@ void display_thread_status(struct jobs_eta *je)
 	p += sprintf(p, "Jobs: %d (f=%d)", je->nr_running, je->files_open);
 
 	/* rate limits, if any */
-	if (je->m_rate[0] || je->m_rate[1] || je->m_rate[2] ||
-	    je->t_rate[0] || je->t_rate[1] || je->t_rate[2]) {
+	if (je->m_rate[0] || je->m_rate[1] || je->m_rate[2] || je->m_rate[3] ||
+	    je->t_rate[0] || je->t_rate[1] || je->t_rate[2] || je->t_rate[3]) {
 		char *tr, *mr;
 
-		mr = num2str(je->m_rate[0] + je->m_rate[1] + je->m_rate[2],
+		mr = num2str(je->m_rate[0] + je->m_rate[1] + je->m_rate[2] + je->m_rate[3],
 				je->sig_figs, 0, je->is_pow2, N2S_BYTEPERSEC);
-		tr = num2str(je->t_rate[0] + je->t_rate[1] + je->t_rate[2],
+		tr = num2str(je->t_rate[0] + je->t_rate[1] + je->t_rate[2] + je->t_rate[3],
 				je->sig_figs, 0, je->is_pow2, N2S_BYTEPERSEC);
 
 		p += sprintf(p, ", %s-%s", mr, tr);
 		free(tr);
 		free(mr);
-	} else if (je->m_iops[0] || je->m_iops[1] || je->m_iops[2] ||
-		   je->t_iops[0] || je->t_iops[1] || je->t_iops[2]) {
+	} else if (je->m_iops[0] || je->m_iops[1] || je->m_iops[2] || je->m_iops[3] ||
+		   je->t_iops[0] || je->t_iops[1] || je->t_iops[2] || je->t_iops[3]) {
 		p += sprintf(p, ", %d-%d IOPS",
-					je->m_iops[0] + je->m_iops[1] + je->m_iops[2],
-					je->t_iops[0] + je->t_iops[1] + je->t_iops[2]);
+					je->m_iops[0] + je->m_iops[1] + je->m_iops[2] + je->m_iops[3],
+					je->t_iops[0] + je->t_iops[1] + je->t_iops[2] + je->t_iops[3]);
 	}
 
 	/* current run string, % done, bandwidth, iops, eta */

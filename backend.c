@@ -1914,6 +1914,8 @@ static void *thread_main(void *data)
 			update_runtime(td, elapsed_us, DDIR_WRITE);
 		if (td_trim(td) && td->io_bytes[DDIR_TRIM])
 			update_runtime(td, elapsed_us, DDIR_TRIM);
+		if (td_copy(td) && td->io_bytes[DDIR_COPY])
+			update_runtime(td, elapsed_us, DDIR_COPY);
 		fio_gettime(&td->start, NULL);
 		fio_sem_up(stat_sem);
 
@@ -2577,6 +2579,7 @@ int fio_backend(struct sk_out *sk_out)
 		setup_log(&agg_io_log[DDIR_READ], &p, "agg-read_bw.log");
 		setup_log(&agg_io_log[DDIR_WRITE], &p, "agg-write_bw.log");
 		setup_log(&agg_io_log[DDIR_TRIM], &p, "agg-trim_bw.log");
+		setup_log(&agg_io_log[DDIR_COPY], &p, "agg-copy_bw.log");
 	}
 
 	startup_sem = fio_sem_init(FIO_SEM_LOCKED);
