@@ -44,13 +44,11 @@ after_build:
   - file.exe fio.exe
   - make.exe test
   - 'cd os\windows && dobuild.cmd %ARCHITECTURE% && cd ..'
+  - ls.exe ./os/windows/*.msi
   - ps: Get-ChildItem .\os\windows\*.msi | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name -DeploymentName fio.msi }
 
 test_script:
   - python.exe t/run-fio-tests.py --artifact-root test-artifacts --debug
-  - cd doc
-  - make.bat html
-  - cd ..
 
 on_finish:
   - 'bash.exe -lc "cd \"${APPVEYOR_BUILD_FOLDER}\" && [ -d test-artifacts ] && 7z a -t7z test-artifacts.7z test-artifacts -xr!foo.0.0 -xr!latency.?.0 -xr!fio_jsonplus_clat2csv.test && appveyor PushArtifact test-artifacts.7z'
