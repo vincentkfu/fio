@@ -2847,6 +2847,14 @@ EOF
 fi
 print_config "timerfd_create" "$timerfd_create"
 
+##########################################
+# check for sphinx support
+sphinx="no"
+if has "sphinx-build" ; then
+  sphinx="yes"
+fi
+print_config "sphinx" "$sphinx"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -3195,6 +3203,9 @@ if test "$pdb" = yes; then
 fi
 if test "$fcntl_sync" = "yes" ; then
   output_sym "CONFIG_FCNTL_SYNC"
+fi
+if test "$sphinx" = "yes"; then
+  output_sym "CONFIG_SPHINX"
 fi
 
 print_config "Lib-based ioengines dynamic" "$dynamic_engines"
