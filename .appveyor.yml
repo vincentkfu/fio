@@ -47,6 +47,19 @@ after_build:
   - ls.exe ./os/windows/*.msi
   - ps: Get-ChildItem .\os\windows\*.msi | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name -DeploymentName fio.msi }
 
+deploy:
+  release: fio-test-v$(APPVEYOR_BUILD_VERSION)-$(ARCHITECHTURE)-$(DISTRO)
+  description: fio installer
+  provider: GitHub
+  auth_token:
+    secure: 97WyWl1klqPujNcifMcJT6CaZqJ6ybh4zB1W2OjBJyujYsuvk7SkEOoMF8/2Uyrv # encrypted token from GitHub
+  artifact: .\os\windows\*.msi     # upload installer to release assets
+  draft: false
+  prerelease: false
+  on:
+    branch: appveyor-release       # release from master branch only
+    APPVEYOR_REPO_TAG: true        # deploy on tag push only
+
 test_script:
   - python.exe t/run-fio-tests.py --artifact-root test-artifacts --debug
 
