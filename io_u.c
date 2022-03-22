@@ -930,7 +930,7 @@ static void setup_strided_zone_mode(struct thread_data *td, struct io_u *io_u)
 static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	bool is_random;
-	uint64_t offset, dest_offset, i = 0;
+	uint64_t offset, dest_offset = 0, i = 0;
 	enum io_u_action ret;
 	struct fio_file *f = io_u->file;
 	enum fio_ddir ddir = io_u->ddir;
@@ -961,8 +961,8 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 		buf_point = io_u->buf;
 		offset = 0;
 
-		get_next_dest_seq_offset(td, f, io_u->ddir, td->o.num_range, &dest_offset);
-
+		if (!fio_option_is_set(&td->o, dest_offset_delta))
+			get_next_dest_seq_offset(td, f, io_u->ddir, td->o.num_range, &dest_offset);
 		entry.len = td->o.bs[ddir];
 		while (i < td->o.num_range) {
 			if (get_next_offset(td, io_u, &is_random)) {
@@ -971,22 +971,24 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 				return 1;
 			}
 
-			offset = io_u->offset;
-			entry.src = offset;
-			entry.dst = dest_offset;
+			entry.src = io_u->offset;
+			if (!fio_option_is_set(&td->o, dest_offset_delta)) {
+				entry.dst = dest_offset;
+				dest_offset += td->o.bs[ddir];
+			} else
+				entry.dst = entry.src + td->o.dest_offset_delta;
 			memcpy(buf_point, &entry, sizeof(struct range_entry));
 			buf_point += sizeof(struct range_entry);
 			f->last_start[io_u->ddir] = io_u->offset;
 			f->last_pos[io_u->ddir] = io_u->offset + td->o.bs[ddir];
 			i++;
-			dest_offset += td->o.bs[ddir];
 
 			if (td_random(td) && file_randommap(td, io_u->file))
 				mark_random_map(td, io_u, offset, td->o.bs[ddir]);
 		}
 
 		io_u->buflen = i * sizeof(struct range_entry);
-		io_u->offset = dest_offset >> 9;
+		io_u->offset = ((struct range_entry *) io_u->buf)->dst;
 	} else {
 		/*
 		 * No log, let the seq/rand engine retrieve the next buflen and
