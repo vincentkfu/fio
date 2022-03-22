@@ -2378,6 +2378,17 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_INVALID,
 	},
 	{
+		.name	= "dest_offset_delta",
+		.lname	= "Destination offset delta",
+		.type	= FIO_OPT_ULL,
+		.off1	= offsetof(struct thread_options, dest_offset_delta),
+		.help	= "Destination offset as delta from source offset",
+		.def	= "0",
+		.interval = 1024 * 1024,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
 		.name	= "offset_align",
 		.lname	= "IO offset alignment",
 		.type	= FIO_OPT_INT,
