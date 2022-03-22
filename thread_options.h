@@ -114,6 +114,7 @@ struct thread_options {
 	unsigned long long start_offset_align;
 	unsigned int start_offset_nz;
 	unsigned long long dest_offset;
+	unsigned long long dest_offset_delta;
 
 	unsigned long long bs[DDIR_RWDIR_CNT];
 	unsigned long long ba[DDIR_RWDIR_CNT];
@@ -438,6 +439,7 @@ struct thread_options_pack {
 	uint64_t start_offset;
 	uint64_t start_offset_align;
 	uint64_t dest_offset;
+	uint64_t dest_offset_delta;
 	uint32_t start_offset_nz;
 
 	uint64_t bs[DDIR_RWDIR_CNT];
