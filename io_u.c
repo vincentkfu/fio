@@ -999,7 +999,10 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	}
 
 	if (io_u->ddir == DDIR_COPY) {
-		get_next_dest_seq_offset(td, f, io_u->ddir, &dest_offset);
+		if (!fio_option_is_set(&td->o, dest_offset_delta))
+			get_next_dest_seq_offset(td, f, io_u->ddir, &dest_offset);
+		else
+			dest_offset = io_u->offset + td->o.dest_offset_delta;
 		*(uint64_t *) io_u->buf = dest_offset;
 	}
 
