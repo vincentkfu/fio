@@ -2,6 +2,7 @@
  * Memory helpers
  */
 #include <fcntl.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -60,13 +61,59 @@ int fio_pin_memory(struct thread_data *td)
 	return 0;
 }
 
+static unsigned int get_hugepage_size(struct thread_data *td)
+{
+	char buf[2048];
+	FILE *fptr;
+	size_t ret;
+	char *start;
+	unsigned int val;
+
+	if (fio_option_is_set(&td->o, hugepage_size))
+		return td->o.hugepage_size;
+
+	fptr = fopen("/proc/meminfo", "r");
+	if (!fptr)
+		return td->o.hugepage_size;
+
+	ret = fread(buf, 1, sizeof(buf)-1, fptr);
+	if (!ret)
+		goto out;
+	buf[ret] = 0;
+
+	start = strstr(buf, "Hugepagesize:");
+	if (!start)
+		goto out;
+	start += strlen("Hugepagesize:");
+	val = strtoul(start, NULL, 10);
+	if (!val)
+		goto out;
+
+	/* skip all the spaces and digits */
+	while (*start == ' ' || isdigit(*start))
+		start++;
+
+	/* make sure it ends with kB */
+	if (*start++ != 'k')
+		goto out;
+	if (*start++ != 'B')
+		goto out;
+
+	td->o.hugepage_size = val * 1024;
+	dprint(FD_MEM, "parsed hugepagesize from /proc/meminfo %u\n", td->o.hugepage_size);
+
+out:
+	fclose(fptr);
+	return td->o.hugepage_size;
+}
+
 static int alloc_mem_shm(struct thread_data *td, unsigned int total_mem)
 {
 #ifndef CONFIG_NO_SHM
 	int flags = IPC_CREAT | S_IRUSR | S_IWUSR;
 
 	if (td->o.mem_type == MEM_SHMHUGE) {
-		unsigned long mask = td->o.hugepage_size - 1;
+		unsigned long mask = get_hugepage_size(td) - 1;
 
 		flags |= SHM_HUGETLB;
 		total_mem = (total_mem + mask) & ~mask;
@@ -128,7 +175,7 @@ static int alloc_mem_mmap(struct thread_data *td, size_t total_mem)
 	td->mmapfd = -1;
 
 	if (td->o.mem_type == MEM_MMAPHUGE) {
-		unsigned long mask = td->o.hugepage_size - 1;
+		unsigned long mask = get_hugepage_size(td) - 1;
 
 		/* TODO: make sure the file is a real hugetlbfs file */
 		if (!td->o.mmapfile)
