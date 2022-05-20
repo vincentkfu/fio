@@ -1818,19 +1818,20 @@ Buffers and memory
 			Use GPU memory as the buffers for GPUDirect RDMA benchmark.
 			The :option:`ioengine` must be `rdma`.
 
-	The area allocated is a function of the maximum allowed bs size for the job,
-	multiplied by the I/O depth given. Note that for **shmhuge** and
-	**mmaphuge** to work, the system must have free huge pages allocated. This
-	can normally be checked and set by reading/writing
-	:file:`/proc/sys/vm/nr_hugepages` on a Linux system. Fio assumes a huge page
-	is 4MiB in size. So to calculate the number of huge pages you need for a
-	given job file, add up the I/O depth of all jobs (normally one unless
-	:option:`iodepth` is used) and multiply by the maximum bs set. Then divide
-	that number by the huge page size. You can see the size of the huge pages in
-	:file:`/proc/meminfo`. If no huge pages are allocated by having a non-zero
-	number in `nr_hugepages`, using **mmaphuge** or **shmhuge** will fail. Also
-	see :option:`hugepage-size`.
-
+        The area allocated is a function of the maximum allowed bs size for the job,
+        multiplied by the I/O depth given. Note that for **shmhuge** and
+        **mmaphuge** to work, the system must have free huge pages allocated. This
+        can normally be checked and set by reading/writing
+        :file:`/proc/sys/vm/nr_hugepages` on a Linux system. To calculate the
+        number of huge pages you need for a given job file, add up the I/O
+        depth of all jobs (normally one unless :option:`iodepth` is used) and
+        multiply by the maximum bs set. Then divide that number by the huge
+        page size. You can see the size of huge pages in
+        :file:`/proc/meminfo`. If no huge pages are allocated by having a
+        non-zero number in `nr_hugepages`, using **mmaphuge** or **shmhuge**
+        will fail. See the option :option:`hugepage-size` below to set the
+        hugepage size for fio to use. 
+        
 	**mmaphuge** also needs to have hugetlbfs mounted and the file location
 	should point there. So if it's mounted in :file:`/huge`, you would use
 	`mem=mmaphuge:/huge/somefile`.
@@ -1849,9 +1850,14 @@ Buffers and memory
 .. option:: hugepage-size=int
 
 	Defines the size of a huge page. Must at least be equal to the system
-	setting, see :file:`/proc/meminfo`. Defaults to 4MiB.  Should probably
-	always be a multiple of megabytes, so using ``hugepage-size=Xm`` is the
-	preferred way to set this to avoid setting a non-pow-2 bad value.
+        setting, see :file:`/proc/meminfo`. Should probably always be a
+        multiple of megabytes, so using ``hugepage-size=Xm`` is the preferred
+        way to set this to avoid setting a non-pow-2 bad value. If this option
+        is not specified fio will attempt to parse :file:`/proc/meminfo` to
+        obtain the system huge page size. If this fails fio will use a platform
+        specific default of 2-4MiB. This value is used by fio to ensure that
+        the amount of memory requested for I/O buffers will be a multiple of
+        the huge page size.
 
 .. option:: lockmem=int
 
