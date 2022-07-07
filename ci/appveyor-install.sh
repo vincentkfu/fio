@@ -23,7 +23,7 @@ case "${DISTRO}" in
         CYG_MIRROR=${CYG_MIRROR:-"http://cygwin.mirror.constant.com"}
         setup-x86_64.exe --quiet-mode --no-shortcuts --only-site \
             --site "${CYG_MIRROR}" --packages \
-            "mingw64-${PACKAGE_ARCH}-CUnit,mingw64-${PACKAGE_ARCH}-zlib"
+            "mingw64-${PACKAGE_ARCH}-CUnit,mingw64-${PACKAGE_ARCH}-zlib,libnfs-devel"
         ;;
     "msys2")
         #pacman --noconfirm -Syuu # MSYS2 core update
@@ -32,7 +32,8 @@ case "${DISTRO}" in
             mingw-w64-${PACKAGE_ARCH}-clang \
             mingw-w64-${PACKAGE_ARCH}-cunit \
             mingw-w64-${PACKAGE_ARCH}-toolchain \
-            mingw-w64-${PACKAGE_ARCH}-lld
+            mingw-w64-${PACKAGE_ARCH}-lld \
+	    mingw-w64-${PACKAGE_ARCH}-libnfs
         pacman.exe -Q # List installed packages
         ;;
 esac
