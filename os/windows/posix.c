@@ -317,6 +317,8 @@ char *ctime_r(const time_t *t, char *buf)
 	return buf;
 }
 
+/* for an msys2 build this is not needed when libnfs is included */
+#ifndef CONFIG_LIBNFS
 int gettimeofday(struct timeval *restrict tp, void *restrict tzp)
 {
 	FILETIME fileTime;
@@ -340,6 +342,9 @@ int gettimeofday(struct timeval *restrict tp, void *restrict tzp)
 	tp->tv_usec = (unix_time % 1000) * 1000;
 	return 0;
 }
+#else
+int gettimeofday(struct timeval *restrict tp, void *restrict tzp);
+#endif
 
 int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
 {
