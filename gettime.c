@@ -265,7 +265,6 @@ static int calibrate_cpu_clock(void)
 	int i, samples, sft = 0;
 	unsigned long long tmp, max_ticks, max_mult;
 
-	cycles[0] = get_cycles_per_msec();
 	S = delta = mean = 0.0;
 	for (i = 0; i < NR_TIME_ITERS; i++) {
 		cycles[i] = get_cycles_per_msec();
