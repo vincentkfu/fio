@@ -16,7 +16,7 @@ static unsigned long long max_cycles_mask;
 static unsigned long long nsecs_for_max_cycles;
 static unsigned int clock_shift;
 static unsigned int max_cycles_shift;
-#define MAX_CLOCK_SEC 60*60
+#define MAX_CLOCK_SEC 60*10
 #endif
 #ifdef ARCH_CPU_CLOCK_WRAPS
 static unsigned int cycles_wrap;
