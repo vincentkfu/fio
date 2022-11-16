@@ -581,8 +581,10 @@ static int fixed_block_size(struct thread_options *o)
 	return o->min_bs[DDIR_READ] == o->max_bs[DDIR_READ] &&
 		o->min_bs[DDIR_WRITE] == o->max_bs[DDIR_WRITE] &&
 		o->min_bs[DDIR_TRIM] == o->max_bs[DDIR_TRIM] &&
+		o->min_bs[DDIR_COPY] == o->max_bs[DDIR_COPY] &&
 		o->min_bs[DDIR_READ] == o->min_bs[DDIR_WRITE] &&
-		o->min_bs[DDIR_READ] == o->min_bs[DDIR_TRIM];
+		o->min_bs[DDIR_READ] == o->min_bs[DDIR_TRIM] &&
+		o->min_bs[DDIR_READ] == o->min_bs[DDIR_COPY];
 }
 
 /*
@@ -605,8 +607,8 @@ static int fixup_options(struct thread_data *td)
 	struct thread_options *o = &td->o;
 	int ret = 0;
 
-	if (read_only && (td_write(td) || td_trim(td))) {
-		log_err("fio: trim and write operations are not allowed"
+	if (read_only && (td_write(td) || td_trim(td) || td_copy(td))) {
+		log_err("fio: trim, copy and write operations are not allowed"
 			 " with the --readonly parameter.\n");
 		ret |= 1;
 	}
@@ -664,9 +666,9 @@ static int fixup_options(struct thread_data *td)
 		o->zone_range = o->zone_size;
 
 	/*
-	 * Reads can do overwrites, we always need to pre-create the file
+	 * Reads and copies can do overwrites, we always need to pre-create the file
 	 */
-	if (td_read(td))
+	if (td_read(td) || td_copy(td))
 		o->overwrite = 1;
 
 	for_each_rw_ddir(ddir) {
@@ -691,7 +693,8 @@ static int fixup_options(struct thread_data *td)
 
 	if ((o->ba[DDIR_READ] != o->min_bs[DDIR_READ] ||
 	    o->ba[DDIR_WRITE] != o->min_bs[DDIR_WRITE] ||
-	    o->ba[DDIR_TRIM] != o->min_bs[DDIR_TRIM]) &&
+	    o->ba[DDIR_TRIM] != o->min_bs[DDIR_TRIM] ||
+	    o->ba[DDIR_COPY] != o->min_bs[DDIR_COPY]) &&
 	    !o->norandommap) {
 		log_err("fio: Any use of blockalign= turns off randommap\n");
 		o->norandommap = 1;
@@ -759,10 +762,10 @@ static int fixup_options(struct thread_data *td)
 	if (o->open_files > o->nr_files || !o->open_files)
 		o->open_files = o->nr_files;
 
-	if (((o->rate[DDIR_READ] + o->rate[DDIR_WRITE] + o->rate[DDIR_TRIM]) &&
-	    (o->rate_iops[DDIR_READ] + o->rate_iops[DDIR_WRITE] + o->rate_iops[DDIR_TRIM])) ||
-	    ((o->ratemin[DDIR_READ] + o->ratemin[DDIR_WRITE] + o->ratemin[DDIR_TRIM]) &&
-	    (o->rate_iops_min[DDIR_READ] + o->rate_iops_min[DDIR_WRITE] + o->rate_iops_min[DDIR_TRIM]))) {
+	if (((o->rate[DDIR_READ] + o->rate[DDIR_WRITE] + o->rate[DDIR_TRIM] + o->rate[DDIR_COPY]) &&
+	    (o->rate_iops[DDIR_READ] + o->rate_iops[DDIR_WRITE] + o->rate_iops[DDIR_TRIM] + o->rate_iops[DDIR_COPY])) ||
+	    ((o->ratemin[DDIR_READ] + o->ratemin[DDIR_WRITE] + o->ratemin[DDIR_TRIM] + o->ratemin[DDIR_COPY]) &&
+	    (o->rate_iops_min[DDIR_READ] + o->rate_iops_min[DDIR_WRITE] + o->rate_iops_min[DDIR_TRIM] + o->rate_iops_min[DDIR_COPY]))) {
 		log_err("fio: rate and rate_iops are mutually exclusive\n");
 		ret |= 1;
 	}
@@ -1018,6 +1021,7 @@ static void td_fill_rand_seeds_internal(struct thread_data *td, bool use64)
 	uint64_t read_seed = td->rand_seeds[FIO_RAND_BS_OFF];
 	uint64_t write_seed = td->rand_seeds[FIO_RAND_BS1_OFF];
 	uint64_t trim_seed = td->rand_seeds[FIO_RAND_BS2_OFF];
+	uint64_t copy_seed = td->rand_seeds[FIO_RAND_BS3_OFF];
 	int i;
 
 	/*
@@ -1035,6 +1039,7 @@ static void td_fill_rand_seeds_internal(struct thread_data *td, bool use64)
 	init_rand_seed(&td->bsrange_state[DDIR_READ], read_seed, use64);
 	init_rand_seed(&td->bsrange_state[DDIR_WRITE], write_seed, use64);
 	init_rand_seed(&td->bsrange_state[DDIR_TRIM], trim_seed, use64);
+	init_rand_seed(&td->bsrange_state[DDIR_COPY], copy_seed, use64);
 
 	td_fill_verify_state_seed(td);
 	init_rand_seed(&td->rwmix_state, td->rand_seeds[FIO_RAND_MIX_OFF], false);
@@ -1715,7 +1720,7 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 				fio_server_send_add_job(td);
 
 			if (!td_ioengine_flagged(td, FIO_NOIO)) {
-				char *c1, *c2, *c3, *c4;
+				char *c1, *c2, *c3, *c4, *c7, *c8;
 				char *c5 = NULL, *c6 = NULL;
 				int i2p = is_power_of_2(o->kb_base);
 				struct buf_output out;
@@ -1724,6 +1729,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 				c2 = num2str(o->max_bs[DDIR_READ], o->sig_figs, 1, i2p, N2S_BYTE);
 				c3 = num2str(o->min_bs[DDIR_WRITE], o->sig_figs, 1, i2p, N2S_BYTE);
 				c4 = num2str(o->max_bs[DDIR_WRITE], o->sig_figs, 1, i2p, N2S_BYTE);
+				c7 = num2str(o->min_bs[DDIR_COPY], o->sig_figs, 1, i2p, N2S_BYTE);
+				c8 = num2str(o->max_bs[DDIR_COPY], o->sig_figs, 1, i2p, N2S_BYTE);
 
 				if (!o->bs_is_seq_rand) {
 					c5 = num2str(o->min_bs[DDIR_TRIM], o->sig_figs, 1, i2p, N2S_BYTE);
@@ -1736,11 +1743,11 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 							ddir_str(o->td_ddir));
 
 				if (o->bs_is_seq_rand)
-					__log_buf(&out, "bs=(R) %s-%s, (W) %s-%s, bs_is_seq_rand, ",
-							c1, c2, c3, c4);
+					__log_buf(&out, "bs=(R) %s-%s, (W) %s-%s, (C) %s-%s, bs_is_seq_rand, ",
+							c1, c2, c3, c4, c7, c8);
 				else
-					__log_buf(&out, "bs=(R) %s-%s, (W) %s-%s, (T) %s-%s, ",
-							c1, c2, c3, c4, c5, c6);
+					__log_buf(&out, "bs=(R) %s-%s, (W) %s-%s, (T) %s-%s, (C) %s-%s, ",
+							c1, c2, c3, c4, c5, c6, c7, c8);
 
 				__log_buf(&out, "ioengine=%s, iodepth=%u\n",
 						td->io_ops->name, o->iodepth);
@@ -1753,6 +1760,8 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 				free(c4);
 				free(c5);
 				free(c6);
+				free(c7);
+				free(c8);
 			}
 		} else if (job_add_num == 1)
 			log_info("...\n");

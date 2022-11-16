@@ -1969,6 +1969,8 @@ enum io_u_action zbd_adjust_block(struct thread_data *td, struct io_u *io_u)
 	case DDIR_LAST:
 	case DDIR_INVAL:
 		goto accept;
+	case DDIR_COPY:
+		goto eof;
 	}
 
 	assert(false);

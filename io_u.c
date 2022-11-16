@@ -405,6 +405,29 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 	return 1;
 }
 
+static void get_next_dest_seq_offset(struct thread_data *td, struct fio_file *f,
+				     enum fio_ddir ddir, uint64_t num_range,
+				     uint64_t *offset)
+{
+	struct thread_options *o = &td->o;
+
+	assert(ddir_rw(ddir));
+
+	if (f->last_pos_dest[ddir] >= f->io_size + f->file_dest_offset &&
+	    o->time_based) {
+		f->last_pos_dest[ddir] =  f->file_dest_offset;
+		loop_cache_invalidate(td, f);
+	}
+	*offset = f->last_pos_dest[ddir];
+	if (f->last_pos_dest[ddir] >= f->real_file_size)
+		f->last_pos_dest[ddir] = f->file_dest_offset;
+	else {
+		f->last_pos_dest[ddir] += (num_range) * (td->o.bs[ddir]);
+		if (f->last_pos_dest[ddir] >= f->real_file_size)
+			f->last_pos_dest[ddir] =  f->file_dest_offset;
+	}
+}
+
 static int get_next_block(struct thread_data *td, struct io_u *io_u,
 			  enum fio_ddir ddir, int rw_seq,
 			  bool *is_random)
@@ -752,6 +775,8 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 		ddir = DDIR_WRITE;
 	else if (td_trim(td))
 		ddir = DDIR_TRIM;
+	else if (td_copy(td))
+		ddir = DDIR_COPY;
 	else
 		ddir = DDIR_INVAL;
 
@@ -905,8 +930,12 @@ static void setup_strided_zone_mode(struct thread_data *td, struct io_u *io_u)
 static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	bool is_random;
-	uint64_t offset;
+	uint64_t offset, dest_offset, i = 0;
 	enum io_u_action ret;
+	struct fio_file *f = io_u->file;
+	enum fio_ddir ddir = io_u->ddir;
+	uint8_t *buf_point;
+	struct range_entry entry;
 
 	if (td_ioengine_flagged(td, FIO_NOIO))
 		goto out;
@@ -928,22 +957,55 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	else if (td->o.zone_mode == ZONE_MODE_ZBD)
 		setup_zbd_zone_mode(td, io_u);
 
-	/*
-	 * No log, let the seq/rand engine retrieve the next buflen and
-	 * position.
-	 */
-	if (get_next_offset(td, io_u, &is_random)) {
-		dprint(FD_IO, "io_u %p, failed getting offset\n", io_u);
-		return 1;
+	if (io_u->ddir == DDIR_COPY) {
+		buf_point = io_u->buf;
+		offset = 0;
+
+		get_next_dest_seq_offset(td, f, io_u->ddir, td->o.num_range, &dest_offset);
+
+		entry.len = td->o.bs[ddir];
+		while (i < td->o.num_range) {
+			if (get_next_offset(td, io_u, &is_random)) {
+				dprint(FD_IO, "io_u %p, failed getting offset\n",
+				       io_u);
+				return 1;
+			}
+
+			offset = io_u->offset;
+			entry.src = offset;
+			entry.dst = dest_offset;
+			memcpy(buf_point, &entry, sizeof(struct range_entry));
+			buf_point += sizeof(struct range_entry);
+			f->last_start[io_u->ddir] = io_u->offset;
+			f->last_pos[io_u->ddir] = io_u->offset + td->o.bs[ddir];
+			i++;
+			dest_offset += td->o.bs[ddir];
+
+			if (td_random(td) && file_randommap(td, io_u->file))
+				mark_random_map(td, io_u, offset, td->o.bs[ddir]);
+		}
+
+		io_u->buflen = i * sizeof(struct range_entry);
+		io_u->offset = dest_offset >> 9;
+	} else {
+		/*
+		 * No log, let the seq/rand engine retrieve the next buflen and
+		 * position.
+		 */
+		if (get_next_offset(td, io_u, &is_random)) {
+			dprint(FD_IO, "io_u %p, failed getting offset\n", io_u);
+			return 1;
+		}
+
+		io_u->buflen = get_next_buflen(td, io_u, is_random);
+		if (!io_u->buflen) {
+			dprint(FD_IO, "io_u %p, failed getting buflen\n", io_u);
+			return 1;
+		}
+
+		offset = io_u->offset;
 	}
 
-	io_u->buflen = get_next_buflen(td, io_u, is_random);
-	if (!io_u->buflen) {
-		dprint(FD_IO, "io_u %p, failed getting buflen\n", io_u);
-		return 1;
-	}
-
-	offset = io_u->offset;
 	if (td->o.zone_mode == ZONE_MODE_ZBD) {
 		ret = zbd_adjust_block(td, io_u);
 		if (ret == io_u_eof)
@@ -961,13 +1023,17 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 	/*
 	 * mark entry before potentially trimming io_u
 	 */
-	if (td_random(td) && file_randommap(td, io_u->file))
+	if (!(io_u->ddir == DDIR_COPY) && td_random(td) && file_randommap(td, io_u->file))
 		io_u->buflen = mark_random_map(td, io_u, offset, io_u->buflen);
 
 out:
 	dprint_io_u(io_u, "fill");
 	io_u->verify_offset = io_u->offset;
-	td->zone_bytes += io_u->buflen;
+	if (!(io_u->ddir == DDIR_COPY))
+		td->zone_bytes += io_u->buflen;
+	else
+		td->zone_bytes += (td->o.num_range * td->o.bs[DDIR_COPY]);
+
 	return 0;
 }
 
@@ -1766,7 +1832,7 @@ struct io_u *get_io_u(struct thread_data *td)
 
 	assert(fio_file_open(f));
 
-	if (ddir_rw(io_u->ddir)) {
+	if (ddir_rw(io_u->ddir) && !(io_u->ddir == DDIR_COPY)) {
 		if (!io_u->buflen && !td_ioengine_flagged(td, FIO_NOIO)) {
 			dprint(FD_IO, "get_io_u: zero buflen on %p\n", io_u);
 			goto err_put;
@@ -1997,9 +2063,14 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 	td->last_ddir = ddir;
 
 	if (!io_u->error && ddir_rw(ddir)) {
-		unsigned long long bytes = io_u->xfer_buflen - io_u->resid;
+		unsigned long long bytes;
 		int ret;
 
+		if (io_u->ddir == DDIR_COPY)
+			bytes = (((io_u->xfer_buflen) * td->o.bs[DDIR_COPY]) /
+						   sizeof(struct range_entry));
+		else
+			bytes = io_u->xfer_buflen - io_u->resid;
 		/*
 		 * Make sure we notice short IO from here, and requeue them
 		 * appropriately!
