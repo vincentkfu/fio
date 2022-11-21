@@ -1,0 +1,132 @@
+#!/bin/bash
+#
+
+bs=(8192 16384 32768 65536 131072 262144 524288 1048576 2097152)
+scc_ranges=(1)
+iodepth=(1)
+ioengine=(psync)
+emulate=(0 1)
+
+sleeptime=5
+numjobs=32
+total_size=12288
+dest_offset_delta=$total_size
+
+size=$(($total_size/$numjobs))
+offset_increment=$size
+dest_offset=$dest_offset_delta
+verify_mib=$total_size
+
+usage() {
+    echo "Usage: $(basename "$0") <drive device node> <artifact-root>"
+}
+
+precon() {
+        opts=()
+        opts+=("--name=precon")
+        opts+=("--filename=$dev")
+        opts+=("--bs=256k")
+        opts+=("--rw=write")
+        opts+=("--direct=1")
+        opts+=("--io_size=${size}M")
+        opts+=("--output-format=json")
+        opts+=("--group_reporting=1")
+        opts+=("--numjobs=$numjobs")
+        opts+=("--offset_increment=${offset_increment}M")
+        opts+=("--ioengine=psync")
+        opts+=("--output=${1}.output")
+
+        echo "fio ${opts[*]}" > ${1}.fio
+        fio ${opts[*]}
+}
+
+verify() {
+        cmp $dev $dev --ignore-initial=0:${dest_offset}M --bytes=${verify_mib}M || compare_error "comparison failed!!!!!!!!"
+}
+
+compare_error() {
+        echo "$1"
+        exit 1
+}
+
+set_io_sched() {
+        realdev=$(readlink -f "$1")
+        basename=$(basename "$realdev")
+        echo "$2" > /sys/block/${basename}/queue/scheduler
+}
+
+enable_copy_offload() {
+        realdev=$(readlink -f "$1")
+        basename=$(basename "$realdev")
+        echo 1 > /sys/block/${basename}/queue/copy_offload
+}
+
+get_max_copy_size() {
+        realdev=$(readlink -f "$1")
+        basename=$(basename "$realdev")
+        let max_copy_size=$(cat /sys/block/${basename}/queue/copy_max_bytes)
+	if [ "$convent" = "-c" ]; then
+		echo $(echo `printf "%u" -1` / 2 | bc)
+	else
+	        echo $max_copy_size
+	fi
+}
+
+run_test() {
+        logfilebase=$artroot/${prefix}.${ioengine}.bs$zbs.iodepth$ziod.zranges$zranges
+        precon ${logfilebase}.precon
+        echo "precon done"
+
+        opts=()
+        opts+=("--rw=copy")
+        opts+=("--output-format=json")
+        opts+=("--group_reporting=1")
+        opts+=("--direct=1")
+        opts+=("--bs=$zbs")
+        opts+=("--filename=$dev")
+#        opts+=("--num_range=$zranges")
+        opts+=("--iodepth=$ziod")
+        opts+=("--io_size=${size}M")
+        opts+=("--dest_offset_delta=${dest_offset_delta}M")
+        opts+=("--numjobs=$numjobs")
+        opts+=("--offset_increment=${offset_increment}M")
+
+        for em in "${emulate[@]}"; do
+                logfile=${logfilebase}.em$em.sctl
+                options=("--name=copy" "--ioengine=$ioengine" "--emulate=$em" "--output=$logfile.json" ${opts[*]})
+                echo "fio ${options[*]}" > $logfile.fio
+                sleep $sleeptime
+                fio ${options[*]}
+                echo "em $em fio job done"
+                verify
+                echo "em $em verify done"
+        done
+}
+
+if [ "$#" -lt 2 ]; then
+        usage
+        exit 1
+fi
+
+prefix=$0
+dev=$1
+artroot=$2
+convent=$3
+
+mkdir -p $artroot
+#enable_copy_offload "$dev"
+max_copy_size=$(get_max_copy_size "$dev")
+
+for zbs in "${bs[@]}"; do
+        for zranges in "${scc_ranges[@]}"; do
+                let csize=$zbs*$zranges
+                if [ "$csize" -le "$max_copy_size" ]; then
+                        for ziod in "${iodepth[@]}"; do
+                                echo bs=$zbs, ranges=$zranges, iodepth=$ziod
+                                run_test
+                        done
+                else
+                        echo skipping bs $zbs, ranges $zranges
+                fi
+        done
+done
