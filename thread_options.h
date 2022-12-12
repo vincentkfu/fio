@@ -113,6 +113,7 @@ struct thread_options {
 	unsigned long long start_offset;
 	unsigned long long start_offset_align;
 	unsigned int start_offset_nz;
+	unsigned long long dest_offset;
 
 	unsigned long long bs[DDIR_RWDIR_CNT];
 	unsigned long long ba[DDIR_RWDIR_CNT];
@@ -241,6 +242,7 @@ struct thread_options {
 	char *numa_memnodes;
 	unsigned int gpu_dev_id;
 	unsigned int start_offset_percent;
+	unsigned int dest_offset_percent;
 
 	unsigned int iolog;
 	unsigned int rwmixcycle;
@@ -420,7 +422,6 @@ struct thread_options_pack {
 	uint32_t iodepth_batch_complete_min;
 	uint32_t iodepth_batch_complete_max;
 	uint32_t serialize_overlap;
-	uint32_t pad;
 
 	uint64_t size;
 	uint64_t io_size;
@@ -436,8 +437,8 @@ struct thread_options_pack {
 	uint64_t file_size_high;
 	uint64_t start_offset;
 	uint64_t start_offset_align;
+	uint64_t dest_offset;
 	uint32_t start_offset_nz;
-	uint32_t pad4;
 
 	uint64_t bs[DDIR_RWDIR_CNT];
 	uint64_t ba[DDIR_RWDIR_CNT];
@@ -561,6 +562,7 @@ struct thread_options_pack {
 #endif
 	uint32_t gpu_dev_id;
 	uint32_t start_offset_percent;
+	uint32_t dest_offset_percent;
 	uint32_t cpus_allowed_policy;
 	uint32_t iolog;
 	uint32_t rwmixcycle;
@@ -601,7 +603,6 @@ struct thread_options_pack {
 	uint32_t lat_percentiles;
 	uint32_t slat_percentiles;
 	uint32_t percentile_precision;
-	uint32_t pad5;
 	fio_fp64_t percentile_list[FIO_IO_U_LIST_MAX_LEN];
 
 	uint8_t read_iolog_file[FIO_TOP_STR_MAX];
