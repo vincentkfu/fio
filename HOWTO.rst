@@ -4292,6 +4292,10 @@ forth.  The possible values (in typical life cycle order) are:
 +------+-----+-----------------------------------------------------------+
 |      |  d  | Running, doing random trims.                              |
 +------+-----+-----------------------------------------------------------+
+|      |  Q  | Running, doing sequential copies.                         |
++------+-----+-----------------------------------------------------------+
+|      |  q  | Running, doing random copies.                             |
++------+-----+-----------------------------------------------------------+
 |      |  F  | Running, currently waiting for :manpage:`fsync(2)`.       |
 +------+-----+-----------------------------------------------------------+
 |      |  V  | Running, doing verification of written data.              |
@@ -4369,7 +4373,7 @@ is 0 when there are no errors), pid/tid of that thread and the time the job/grou
 completed.  Below are the I/O statistics for each data direction performed (showing
 writes in the example above).  In the order listed, they denote:
 
-**read/write/trim**
+**read/write/trim/copy**
 		The string before the colon shows the I/O direction the statistics
 		are for.  **IOPS** is the average I/Os performed per second.  **BW**
 		is the average bandwidth rate shown as: value in power of 2 format
