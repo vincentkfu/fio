@@ -177,8 +177,8 @@ Command line options
 	``--readonly`` option is an extra safety guard to prevent users from
 	accidentally starting a write or trim workload when that is not desired.
 	Fio will only modify the device under test if
-	`rw=write/randwrite/rw/randrw/trim/randtrim/trimwrite` is given.  This
-	safety net can be used as an extra precaution.
+	`rw=write/randwrite/rw/randrw/trim/randtrim/trimwrite/copy/randcopy` is given.
+	This safety net can be used as an extra precaution.
 
 .. option:: --eta=when
 
@@ -1128,6 +1128,8 @@ I/O type
 		**trim**
 				Sequential trims (Linux block devices and SCSI
 				character devices only).
+		**copy**
+				Sequential copy (Source offset will be sequential).
 		**randread**
 				Random reads.
 		**randwrite**
@@ -1135,6 +1137,8 @@ I/O type
 		**randtrim**
 				Random trims (Linux block devices and SCSI
 				character devices only).
+		**randcopy**
+				Random copy (Source offset will be random).
 		**rw,readwrite**
 				Sequential mixed reads and writes.
 		**randrw**
@@ -1365,6 +1369,15 @@ I/O type
 	If a percentage is given, the generated offset will be aligned to the minimum
 	``blocksize`` or to the value of ``offset_align`` if provided. In ZBD mode, value can
         also be set as number of zones using 'z'.
+
+.. option:: dest_offset=int
+
+	Destination offset in the file for copy command, given as either a fixed size
+	in bytes or a percentage. The option 'offset' is now used as source offset for
+	copy command. If a percentage is given, the generated offset will be aligned
+	to the minimum ``blocksize`` or to the value of ``offset_align`` if provided.
+	A percentage can be specified by a number between 1 and 100 followed by '%',
+	for example, ``dest_offset=40%`` to specify 40%.
 
 .. option:: number_ios=int
 

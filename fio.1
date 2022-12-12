@@ -74,7 +74,7 @@ Convert given \fIjobfile\fRs to a set of command\-line options.
 Turn on safety read\-only checks, preventing writes and trims. The \fB\-\-readonly\fR
 option is an extra safety guard to prevent users from accidentally starting
 a write or trim workload when that is not desired. Fio will only modify the
-device under test if `rw=write/randwrite/rw/randrw/trim/randtrim/trimwrite'
+device under test if `rw=write/randwrite/rw/randrw/trim/randtrim/trimwrite/copy/randcopy'
 is given. This safety net can be used as an extra precaution.
 .TP
 .BI \-\-eta \fR=\fPwhen
@@ -893,6 +893,9 @@ Sequential writes.
 .B trim
 Sequential trims (Linux block devices and SCSI character devices only).
 .TP
+.B copy
+Sequential copy (Source offset will be sequential).
+.TP
 .B randread
 Random reads.
 .TP
@@ -901,6 +904,9 @@ Random writes.
 .TP
 .B randtrim
 Random trims (Linux block devices and SCSI character devices only).
+.TP
+.B randcopy
+Random copy (Source offset will be random).
 .TP
 .B rw,readwrite
 Sequential mixed reads and writes.
@@ -1158,6 +1164,14 @@ spacing between the starting points. Percentages can be used for this option.
 If a percentage is given, the generated offset will be aligned to the minimum
 \fBblocksize\fR or to the value of \fBoffset_align\fR if provided.In ZBD mode, value
 can be set as number of zones using 'z'.
+.TP
+.BI dest_offset \fR=\fPint
+Destination offset in the file for copy command, given as either a fixed size in
+bytes or a percentage. The \fBoffset\fR is now used as source offset for copy command.
+If a percentage is given, the generated destination offset will be aligned to the
+minimum \fBblocksize\fR or to the value of \fBoffset_align\fR if provided.
+A percentage can be specified by a number between 1 and 100 followed by '%',
+for example, `dest_offset=40%' to specify 40%.
 .TP
 .BI number_ios \fR=\fPint
 Fio will normally perform I/Os until it has exhausted the size of the region
