@@ -1619,6 +1619,22 @@ static int str_offset_increment_cb(void *data, unsigned long long *__val)
 	return 0;
 }
 
+static int str_dest_offset_cb(void *data, unsigned long long *__val)
+{
+	struct thread_data *td = cb_data_to_td(data);
+	unsigned long long v = *__val;
+
+	if (parse_is_percent(v)) {
+		td->o.dest_offset = 0;
+		td->o.dest_offset_percent = -1ULL - v;
+		dprint(FD_PARSE, "SET dest_offset_percent %d\n",
+					td->o.dest_offset_percent);
+	} else
+		td->o.dest_offset = v;
+
+	return 0;
+}
+
 static int str_size_cb(void *data, unsigned long long *__val)
 {
 	struct thread_data *td = cb_data_to_td(data);
@@ -1919,6 +1935,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			    .oval = TD_DDIR_TRIM,
 			    .help = "Sequential trim",
 			  },
+			  { .ival = "copy",
+			    .oval = TD_DDIR_COPY,
+			    .help = "Sequential copy",
+			  },
 			  { .ival = "randread",
 			    .oval = TD_DDIR_RANDREAD,
 			    .help = "Random read",
@@ -1930,6 +1950,10 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 			  { .ival = "randtrim",
 			    .oval = TD_DDIR_RANDTRIM,
 			    .help = "Random trim",
+			  },
+			  { .ival = "randcopy",
+			    .oval = TD_DDIR_RANDCOPY,
+			    .help = "Random copy",
 			  },
 			  { .ival = "rw",
 			    .oval = TD_DDIR_RW,
@@ -2316,6 +2340,18 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.off1	= offsetof(struct thread_options, start_offset),
 		.help	= "Start IO from this offset",
 		.def	= "0",
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_INVALID,
+	},
+	{
+		.name	= "dest_offset",
+		.lname	= "Destination offset",
+		.type	= FIO_OPT_STR_VAL,
+		.cb	= str_dest_offset_cb,
+		.off1	= offsetof(struct thread_options, dest_offset),
+		.help	= "Start of the destination offset",
+		.def	= "0",
+		.interval = 1024 * 1024,
 		.category = FIO_OPT_C_IO,
 		.group	= FIO_OPT_G_INVALID,
 	},
