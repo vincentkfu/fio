@@ -3954,6 +3954,12 @@ Running, doing sequential trims.
 .B d
 Running, doing random trims.
 .TP
+.B Q
+Running, doing sequential copies.
+.TP
+.B q
+Running, doing random copies.
+.TP
 .B F
 Running, currently waiting for \fBfsync\fR\|(2).
 .TP
@@ -4032,7 +4038,7 @@ completed. Below are the I/O statistics for each data direction performed (showi
 writes in the example above). In the order listed, they denote:
 .RS
 .TP
-.B read/write/trim
+.B read/write/trim/copy
 The string before the colon shows the I/O direction the statistics
 are for. \fIIOPS\fR is the average I/Os performed per second. \fIBW\fR
 is the average bandwidth rate shown as: value in power of 2 format
