@@ -343,7 +343,7 @@ void show_group_stats(struct group_run_stats *rs, struct buf_output *out)
 {
 	char *io, *agg, *min, *max;
 	char *ioalt, *aggalt, *minalt, *maxalt;
-	const char *str[] = { "   READ", "  WRITE" , "   TRIM"};
+	const char *str[] = { "   READ", "  WRITE" , "   TRIM", "   COPY"};
 	int i;
 
 	log_buf(out, "\nRun status group %d (all jobs):\n", rs->groupid);
@@ -1242,19 +1242,22 @@ static void show_thread_status_normal(struct thread_stat *ts,
 					io_u_dist[1], io_u_dist[2],
 					io_u_dist[3], io_u_dist[4],
 					io_u_dist[5], io_u_dist[6]);
-	log_buf(out, "     issued rwts: total=%llu,%llu,%llu,%llu"
-				 " short=%llu,%llu,%llu,0"
-				 " dropped=%llu,%llu,%llu,0\n",
+	log_buf(out, "   issued rwtcs: total=%llu,%llu,%llu,%llu,%llu"
+				 " short=%llu,%llu,%llu,%llu,0"
+				 " dropped=%llu,%llu,%llu,%llu,0\n",
 					(unsigned long long) ts->total_io_u[0],
 					(unsigned long long) ts->total_io_u[1],
 					(unsigned long long) ts->total_io_u[2],
 					(unsigned long long) ts->total_io_u[3],
+					(unsigned long long) ts->total_io_u[4],
 					(unsigned long long) ts->short_io_u[0],
 					(unsigned long long) ts->short_io_u[1],
 					(unsigned long long) ts->short_io_u[2],
+					(unsigned long long) ts->short_io_u[3],
 					(unsigned long long) ts->drop_io_u[0],
 					(unsigned long long) ts->drop_io_u[1],
-					(unsigned long long) ts->drop_io_u[2]);
+					(unsigned long long) ts->drop_io_u[2],
+					(unsigned long long) ts->drop_io_u[3]);
 	if (ts->continue_on_error) {
 		log_buf(out, "     errors    : total=%llu, first_error=%d/<%s>\n",
 					(unsigned long long)ts->total_err_count,
@@ -1610,6 +1613,7 @@ static void show_thread_status_terse_all(struct thread_stat *ts,
 	}
 	if (ts->unified_rw_rep == UNIFIED_BOTH)
 		show_mixed_ddir_status_terse(ts, rs, ver, out);
+
 	/* CPU Usage */
 	if (ts->total_run_time) {
 		double runt = (double) ts->total_run_time;
@@ -1713,6 +1717,7 @@ static struct json_object *show_thread_status_json(struct thread_stat *ts,
 	add_ddir_status_json(ts, rs, DDIR_READ, root);
 	add_ddir_status_json(ts, rs, DDIR_WRITE, root);
 	add_ddir_status_json(ts, rs, DDIR_TRIM, root);
+	add_ddir_status_json(ts, rs, DDIR_COPY, root);
 	add_ddir_status_json(ts, rs, DDIR_SYNC, root);
 
 	if (ts->unified_rw_rep == UNIFIED_BOTH)
@@ -2751,6 +2756,8 @@ int __show_running_run_stats(void)
 			td->ts.runtime[DDIR_WRITE] += rt[__td_index];
 		if (td_trim(td) && td->ts.io_bytes[DDIR_TRIM])
 			td->ts.runtime[DDIR_TRIM] += rt[__td_index];
+		if (td_copy(td) && td->ts.io_bytes[DDIR_COPY])
+			td->ts.runtime[DDIR_COPY] += rt[__td_index];
 	} end_for_each();
 
 	for_each_td(td) {
@@ -2775,6 +2782,8 @@ int __show_running_run_stats(void)
 			td->ts.runtime[DDIR_WRITE] -= rt[__td_index];
 		if (td_trim(td) && td->ts.io_bytes[DDIR_TRIM])
 			td->ts.runtime[DDIR_TRIM] -= rt[__td_index];
+		if (td_copy(td) && td->ts.io_bytes[DDIR_COPY])
+			td->ts.runtime[DDIR_COPY] -= rt[__td_index];
 	} end_for_each();
 
 	free(rt);
