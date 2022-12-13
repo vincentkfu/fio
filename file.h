@@ -100,6 +100,7 @@ struct fio_file {
 	 */
 	uint64_t real_file_size;
 	uint64_t file_offset;
+	uint64_t file_dest_offset;
 	uint64_t io_size;
 
 	struct fio_ruhs_info *ruhs_info;
@@ -116,6 +117,7 @@ struct fio_file {
 	 * Track last end and last start of IO for a given data direction
 	 */
 	uint64_t last_pos[DDIR_RWDIR_CNT];
+	uint64_t last_pos_dest[DDIR_RWDIR_CNT];
 	uint64_t last_start[DDIR_RWDIR_CNT];
 
 	uint64_t first_write;
@@ -204,6 +206,7 @@ struct thread_data;
 extern void close_files(struct thread_data *);
 extern void close_and_free_files(struct thread_data *);
 extern uint64_t get_start_offset(struct thread_data *, struct fio_file *);
+extern uint64_t get_dest_offset(struct thread_data *, struct fio_file *);
 extern int __must_check setup_files(struct thread_data *);
 extern int __must_check file_invalidate_cache(struct thread_data *, struct fio_file *);
 #ifdef __cplusplus
