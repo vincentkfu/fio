@@ -126,6 +126,7 @@ enum {
 	FIO_RAND_BS_OFF		= 0,
 	FIO_RAND_BS1_OFF,
 	FIO_RAND_BS2_OFF,
+	FIO_RAND_BS3_OFF,
 	FIO_RAND_VER_OFF,
 	FIO_RAND_MIX_OFF,
 	FIO_RAND_FILE_OFF,
@@ -136,6 +137,7 @@ enum {
 	FIO_RAND_SEQ_RAND_READ_OFF,
 	FIO_RAND_SEQ_RAND_WRITE_OFF,
 	FIO_RAND_SEQ_RAND_TRIM_OFF,
+	FIO_RAND_SEQ_RAND_COPY_OFF,
 	FIO_RAND_START_DELAY,
 	FIO_DEDUPE_OFF,
 	FIO_RAND_POISSON_OFF,
@@ -794,6 +796,7 @@ static inline unsigned long long td_max_bs(struct thread_data *td)
 	unsigned long long max_bs;
 
 	max_bs = max(td->o.max_bs[DDIR_READ], td->o.max_bs[DDIR_WRITE]);
+	max_bs = max(td->o.max_bs[DDIR_COPY], max_bs);
 	return max(td->o.max_bs[DDIR_TRIM], max_bs);
 }
 
@@ -802,6 +805,7 @@ static inline unsigned long long td_min_bs(struct thread_data *td)
 	unsigned long long min_bs;
 
 	min_bs = min(td->o.min_bs[DDIR_READ], td->o.min_bs[DDIR_WRITE]);
+	min_bs = min(td->o.min_bs[DDIR_COPY], min_bs);
 	return min(td->o.min_bs[DDIR_TRIM], min_bs);
 }
 
