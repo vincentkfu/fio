@@ -703,6 +703,10 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 					td->verify_read_issues++;
 					populate_verify_io_u(td, io_u);
 					break;
+				} else if (io_u->ddir == DDIR_COPY) {
+					td->io_issues[DDIR_COPY]++;
+					put_io_u(td, io_u);
+					continue;
 				} else {
 					put_io_u(td, io_u);
 					continue;
@@ -784,6 +788,8 @@ static bool io_bytes_exceeded(struct thread_data *td, uint64_t *this_bytes)
 		bytes = this_bytes[DDIR_WRITE];
 	else if (td_read(td))
 		bytes = this_bytes[DDIR_READ];
+	else if (td_copy(td))
+		bytes = this_bytes[DDIR_COPY];
 	else
 		bytes = this_bytes[DDIR_TRIM];
 
@@ -1331,7 +1337,8 @@ int init_io_u_buffers(struct thread_data *td)
 	td->orig_buffer_size = (unsigned long long) max_bs
 					* (unsigned long long) max_units;
 
-	if (td_ioengine_flagged(td, FIO_NOIO) || !(td_read(td) || td_write(td)))
+	if (td_ioengine_flagged(td, FIO_NOIO) || !(td_read(td) ||
+	    td_write(td) || td_copy(td)))
 		data_xfer = 0;
 
 	/*
@@ -1855,12 +1862,14 @@ static void *thread_main(void *data)
 	init_thinktime(td);
 
 	if (o->ratemin[DDIR_READ] || o->ratemin[DDIR_WRITE] ||
-			o->ratemin[DDIR_TRIM]) {
+	    o->ratemin[DDIR_TRIM] || o->ratemin[DDIR_COPY]) {
 	        memcpy(&td->last_rate_check_time[DDIR_READ], &td->bw_sample_time,
 					sizeof(td->bw_sample_time));
 	        memcpy(&td->last_rate_check_time[DDIR_WRITE], &td->bw_sample_time,
 					sizeof(td->bw_sample_time));
 	        memcpy(&td->last_rate_check_time[DDIR_TRIM], &td->bw_sample_time,
+					sizeof(td->bw_sample_time));
+	        memcpy(&td->last_rate_check_time[DDIR_COPY], &td->bw_sample_time,
 					sizeof(td->bw_sample_time));
 	}
 

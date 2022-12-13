@@ -2084,6 +2084,8 @@ retry:
 	case DDIR_LAST:
 	case DDIR_INVAL:
 		goto accept;
+	case DDIR_COPY:
+		goto eof;
 	}
 
 	assert(false);
