@@ -280,6 +280,8 @@ static void io_workqueue_update_acct_fn(struct submit_worker *sw)
 		sum_ddir(dst, src, DDIR_WRITE);
 	if (td_trim(src))
 		sum_ddir(dst, src, DDIR_TRIM);
+	if (td_copy(src))
+		sum_ddir(dst, src, DDIR_COPY);
 
 }
 

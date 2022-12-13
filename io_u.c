@@ -405,6 +405,29 @@ static int get_next_seq_offset(struct thread_data *td, struct fio_file *f,
 	return 1;
 }
 
+static void get_next_dest_seq_offset(struct thread_data *td, struct fio_file *f,
+				     struct io_u *io_u, uint64_t *offset)
+{
+	struct thread_options *o = &td->o;
+	enum fio_ddir ddir = io_u->ddir;
+
+	assert(ddir_rw(ddir));
+
+	if (f->last_pos_dest[ddir] >= f->io_size + f->file_dest_offset &&
+	    o->time_based) {
+		f->last_pos_dest[ddir] =  f->file_dest_offset;
+		loop_cache_invalidate(td, f);
+	}
+	*offset = f->last_pos_dest[ddir];
+	if (f->last_pos_dest[ddir] >= f->real_file_size)
+		f->last_pos_dest[ddir] = f->file_dest_offset;
+	else {
+		f->last_pos_dest[ddir] += io_u->buflen;
+		if (f->last_pos_dest[ddir] >= f->real_file_size)
+			f->last_pos_dest[ddir] = f->file_dest_offset;
+	}
+}
+
 static int get_next_block(struct thread_data *td, struct io_u *io_u,
 			  enum fio_ddir ddir, int rw_seq,
 			  bool *is_random)
@@ -782,6 +805,8 @@ static enum fio_ddir get_rw_ddir(struct thread_data *td)
 		ddir = DDIR_WRITE;
 	else if (td_trim(td))
 		ddir = DDIR_TRIM;
+	else if (td_copy(td))
+		ddir = DDIR_COPY;
 	else
 		ddir = DDIR_INVAL;
 
@@ -943,8 +968,9 @@ static void setup_strided_zone_mode(struct thread_data *td, struct io_u *io_u)
 static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 {
 	bool is_random;
-	uint64_t offset;
+	uint64_t offset, dest_offset;
 	enum io_u_action ret;
+	struct fio_file *f = io_u->file;
 
 	if (td_ioengine_flagged(td, FIO_NOIO))
 		goto out;
@@ -981,6 +1007,11 @@ static int fill_io_u(struct thread_data *td, struct io_u *io_u)
 		return 1;
 	}
 
+	if (io_u->ddir == DDIR_COPY) {
+		get_next_dest_seq_offset(td, f, io_u, &dest_offset);
+		*(uint64_t *) io_u->buf = dest_offset;
+	}
+
 	offset = io_u->offset;
 	if (td->o.zone_mode == ZONE_MODE_ZBD) {
 		ret = zbd_adjust_block(td, io_u);
@@ -1011,6 +1042,7 @@ out:
 	dprint_io_u(io_u, "fill");
 	io_u->verify_offset = io_u->offset;
 	td->zone_bytes += io_u->buflen;
+
 	return 0;
 }
 
@@ -2041,9 +2073,10 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 	td->last_ddir = ddir;
 
 	if (!io_u->error && ddir_rw(ddir)) {
-		unsigned long long bytes = io_u->xfer_buflen - io_u->resid;
+		unsigned long long bytes;
 		int ret;
 
+		bytes = io_u->xfer_buflen - io_u->resid;
 		/*
 		 * Make sure we notice short IO from here, and requeue them
 		 * appropriately!

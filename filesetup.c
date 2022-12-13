@@ -767,6 +767,14 @@ open_again:
 			f->fd = dup(STDIN_FILENO);
 		else
 			from_hash = file_lookup_open(f, flags);
+	} else if (td_copy(td)) {
+		if (!read_only)
+			flags |= O_RDWR;
+
+		if (is_std)
+			f->fd = dup(STDIN_FILENO);
+		else
+			from_hash = file_lookup_open(f, flags);
 	} else if (td_trim(td)) {
 		assert(!td_rw(td)); /* should have matched above */
 		if (!read_only)
@@ -971,6 +979,54 @@ uint64_t get_start_offset(struct thread_data *td, struct fio_file *f)
 	} else {
 		/* start_offset_percent not set */
 		offset = o->start_offset +
+				td->subjob_number * increment;
+	}
+
+	if (align) {
+		/*
+		 * if offset_align is provided, use it
+		 */
+		if (fio_option_is_set(o, start_offset_align)) {
+			align_bs = o->start_offset_align;
+		} else {
+			/* else take the minimum block size */
+			align_bs = td_min_bs(td);
+		}
+
+		/*
+		 * block align the offset at the next available boundary at
+		 * ceiling(offset / align_bs) * align_bs
+		 */
+		offset = (offset / align_bs + (offset % align_bs != 0)) * align_bs;
+	}
+
+	return offset;
+}
+
+uint64_t get_dest_offset(struct thread_data *td, struct fio_file *f)
+{
+	bool align = false;
+	struct thread_options *o = &td->o;
+	unsigned long long align_bs;
+	unsigned long long offset;
+	unsigned long long increment;
+
+	if (o->offset_increment_percent) {
+		assert(!o->offset_increment);
+		increment = o->offset_increment_percent * f->real_file_size / 100;
+		align = true;
+	} else
+		increment = o->offset_increment;
+
+	if (o->dest_offset_percent > 0) {
+		/* calculate the raw offset */
+		offset = (f->real_file_size * o->dest_offset_percent / 100) +
+			(td->subjob_number * increment);
+
+		align = true;
+	} else {
+		/* start_offset_percent not set */
+		offset = o->dest_offset +
 				td->subjob_number * increment;
 	}
 
@@ -1262,6 +1318,9 @@ int setup_files(struct thread_data *td)
 				    td_ioengine_flagged(td, FIO_FAKEIO)))
 				f->real_file_size = f->io_size + f->file_offset;
 		}
+
+		if (td_copy(td))
+			f->file_dest_offset = get_dest_offset(td, f);
 	}
 
 	if (td->o.block_error_hist) {
@@ -1444,6 +1503,7 @@ static void __init_rand_distribution(struct thread_data *td, struct fio_file *f)
 	uint64_t fsize;
 
 	range_size = min(td->o.min_bs[DDIR_READ], td->o.min_bs[DDIR_WRITE]);
+	range_size = min((unsigned long long)range_size, td->o.min_bs[DDIR_COPY]);
 	fsize = min(f->real_file_size, f->io_size);
 
 	nranges = (fsize + range_size - 1ULL) / range_size;
@@ -2094,6 +2154,7 @@ void fio_file_reset(struct thread_data *td, struct fio_file *f)
 	for (i = 0; i < DDIR_RWDIR_CNT; i++) {
 		f->last_pos[i] = f->file_offset;
 		f->last_start[i] = -1ULL;
+		f->last_pos_dest[i] = f->file_dest_offset;
 	}
 
 	if (fio_file_axmap(f))
