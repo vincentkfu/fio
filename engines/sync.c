@@ -89,6 +89,46 @@ static struct fio_option options[] = {
 };
 #endif
 
+struct copy_option_data {
+	struct thread_data *td;
+	unsigned int emulate;
+};
+
+static struct fio_option copy_options[] = {
+	{
+		.name	= "emulate",
+		.lname	= "Emulate copy commands",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct copy_option_data, emulate),
+		.help	= "Emulate copy commands",
+		.def	= "0",
+		.category = FIO_OPT_C_ENGINE,
+		.group	= FIO_OPT_G_IO_TYPE,
+	},
+	{
+		.name	= NULL,
+	},
+};
+
+static int fio_copy_emulate(struct thread_data *td, struct io_u *io_u)
+{
+	struct fio_file *f = io_u->file;
+	int ret;
+	uint64_t dest = *(uint64_t *)io_u->buf;
+
+	ret = pread(f->fd, io_u->buf, io_u->buflen, io_u->offset);
+	if (ret < 0)
+		return ret;
+	assert(ret == io_u->buflen);
+
+	ret = pwrite(f->fd, io_u->buf, io_u->buflen, dest);
+	if (ret < 0)
+		return ret;
+	assert(ret == io_u->buflen);
+
+	return ret;
+}
+
 static int fio_syncio_prep(struct thread_data *td, struct io_u *io_u)
 {
 	struct fio_file *f = io_u->file;
@@ -208,6 +248,30 @@ static enum fio_q_status fio_psyncio_queue(struct thread_data *td,
 		ret = pwrite(f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
 	else if (io_u->ddir == DDIR_TRIM) {
 		do_io_u_trim(td, io_u);
+		return FIO_Q_COMPLETED;
+	} else if (io_u->ddir == DDIR_COPY) {
+		struct copy_option_data *eo = td->eo;
+
+		if (eo->emulate)
+			ret = fio_copy_emulate(td, io_u);
+		else {
+#ifdef CONFIG_COPY_FILE_RANGE
+			off64_t dest = *(uint64_t *) io_u->buf;
+			off64_t src = io_u->offset;
+			ret = copy_file_range(f->fd, &src, f->fd, &dest, io_u->buflen, 0);
+#else
+			errno = ENOTSUP;
+			ret = -1;
+#endif
+		}
+
+		if (ret < 0) {
+			io_u->error = errno;
+			td_verror(td, io_u->error, "xfer");
+		}
+
+		assert(ret == io_u->buflen);
+
 		return FIO_Q_COMPLETED;
 	} else
 		ret = do_io_u_sync(td, io_u);
@@ -442,6 +506,8 @@ static struct ioengine_ops ioengine_prw = {
 	.close_file	= generic_close_file,
 	.get_file_size	= generic_get_file_size,
 	.flags		= FIO_SYNCIO,
+	.options	= copy_options,
+	.option_struct_size	= sizeof(struct copy_option_data),
 };
 
 static struct ioengine_ops ioengine_vrw = {
