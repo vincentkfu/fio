@@ -2938,6 +2938,22 @@ EOF
 fi
 print_config "timerfd_create" "$timerfd_create"
 
+##########################################
+# check for copy_file_range support
+copy_file_range="no"
+cat > $TMPC << EOF
+#include <unistd.h>
+
+int main(int argc, char **argv)
+{
+	return copy_file_range(0, 0, 0, 0, 0, 0);
+}
+EOF
+if compile_prog "" "" "copy_file_range"; then
+  copy_file_range="yes"
+fi
+print_config "copy_file_range" "$copy_file_range"
+
 #############################################################################
 
 if test "$wordsize" = "64" ; then
@@ -3297,6 +3313,9 @@ if test "$pdb" = yes; then
 fi
 if test "$fcntl_sync" = "yes" ; then
   output_sym "CONFIG_FCNTL_SYNC"
+fi
+if test "$copy_file_range" = "yes" ; then
+  output_sym "CONFIG_COPY_FILE_RANGE"
 fi
 if test "$asan" = "yes"; then
   CFLAGS="$CFLAGS -fsanitize=address"
