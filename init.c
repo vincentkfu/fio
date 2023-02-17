@@ -1527,13 +1527,13 @@ static int add_job(struct thread_data *td, const char *jobname, int job_add_num,
 		}
 	}
 
+	if (fixup_options(td))
+		goto err;
+
 	if (setup_random_seeds(td)) {
 		td_verror(td, errno, "setup_random_seeds");
 		goto err;
 	}
-
-	if (fixup_options(td))
-		goto err;
 
 	if (!td->o.dedupe_global && init_dedupe_working_set_seeds(td, 0))
 		goto err;
