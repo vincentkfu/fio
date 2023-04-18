@@ -198,7 +198,7 @@ static int bssplit_ddir(struct thread_options *o, void *eo,
 
 	o->min_bs[ddir] = min_bs;
 	o->max_bs[ddir] = max_bs;
-
+	dprint(FD_PARSE, "ddir = %d, min_bs = %llu, max_bs = %llu\n", ddir, min_bs, max_bs);
 	/*
 	 * now sort based on percentages, for ease of lookup
 	 */
@@ -209,23 +209,44 @@ static int bssplit_ddir(struct thread_options *o, void *eo,
 int str_split_parse(struct thread_data *td, char *str,
 		    split_parse_fn *fn, void *eo, bool data)
 {
-	char *odir, *ddir;
+	char *odir, *ddir, *copy;
 	int ret = 0;
 
 	odir = strchr(str, ',');
 	if (odir) {
 		ddir = strchr(odir + 1, ',');
 		if (ddir) {
-			ret = fn(&td->o, eo, DDIR_TRIM, ddir + 1, data);
-			if (!ret)
-				*ddir = '\0';
+			copy = strchr(ddir + 1, ',');
+			if (copy) {
+				ret = fn(&td->o, eo, DDIR_COPY, copy + 1, data);
+				if (!ret)
+					*copy = '\0';
+			} else {
+				char *op;
+
+				op = strdup(ddir + 1);
+				ret = fn(&td->o, eo, DDIR_COPY, op, data);
+				free(op);
+			}
+
+			if (!ret) {
+				ret = fn(&td->o, eo, DDIR_TRIM, ddir + 1, data);
+				if (!ret)
+					*ddir = '\0';
+			}
 		} else {
 			char *op;
 
 			op = strdup(odir + 1);
 			ret = fn(&td->o, eo, DDIR_TRIM, op, data);
-
 			free(op);
+
+			if (!ret) {
+				op = strdup(odir + 1);
+				ret = fn(&td->o, eo, DDIR_COPY, op, data);
+				free(op);
+			}
+
 		}
 		if (!ret)
 			ret = fn(&td->o, eo, DDIR_WRITE, odir + 1, data);
@@ -245,8 +266,13 @@ int str_split_parse(struct thread_data *td, char *str,
 			ret = fn(&td->o, eo, DDIR_TRIM, op, data);
 			free(op);
 		}
+		if (!ret) {
+			op = strdup(str);
+			ret = fn(&td->o, eo, DDIR_READ, op, data);
+			free(op);
+		}
 		if (!ret)
-			ret = fn(&td->o, eo, DDIR_READ, str, data);
+			ret = fn(&td->o, eo, DDIR_COPY, str, data);
 	}
 
 	return ret;
