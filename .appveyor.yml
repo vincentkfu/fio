@@ -8,7 +8,7 @@ environment:
   matrix:
     - ARCHITECTURE: x64
       CC: clang
-      CONFIGURE_OPTIONS: --enable-pdb
+      CONFIGURE_OPTIONS: --enable-pdb --disable-tls
       DISTRO: msys2
 # Skip 32 bit clang build
 #    - ARCHITECTURE: x86
