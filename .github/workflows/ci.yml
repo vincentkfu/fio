@@ -111,6 +111,11 @@ jobs:
       with:
         name: ${{ matrix.build }}-installer
         path: os\windows\*.msi
+    - name: Upload releases for tagged bluies
+      uses: softprops/action-gh-release@v1
+      if: ${{ startsWith(github.ref, 'refs/tags/') && contains(matrix.build, 'windows') }}
+      with:
+        files: os\windows\*.msi
     - name: Smoke test
       run:  ${{matrix.shell}} ./ci/actions-smoke-test.sh
     - name: Full test
