@@ -2538,12 +2538,16 @@ with the caveat that when used on the command line, they must come after the
 
 .. option:: plids=str, fdp_pli=str : [io_uring_cmd] [xnvme]
 
-        Select which Placement IDs (streams) or Placement ID Indices (FDP) this
-        job is allowed to use for writes. For FDP by default, the job will
-        cycle through all available Placement IDs, so use this to isolate these
-        identifiers to specific jobs. If you want fio to use FDP placement
-        identifiers only at indices 0, 2 and 5 specify ``plids=0,2,5``. For
-        streams this should be a comma-separated list of Stream IDs.
+        Select which Placement ID Indices (FDP) or Placement IDs (streams) this
+        job is allowed to use for writes.
+
+        For FDP by default, the job will cycle through all available Placement
+        IDs, so use this option to be selective. The indices specified here
+        reference the array of placement IDs returned by the nvme-cli command
+        ``nvme fdp status``. If you want fio to use FDP placement identifiers
+        only at indices 0, 2 and 5, set ``plids=0,2,5``.
+
+        For streams this should be a comma-separated list of Stream IDs.
 
 .. option:: dp_scheme=str : [io_uring_cmd] [xnvme]
 
