@@ -24,6 +24,7 @@ jobs:
         CI_TARGET_ARCH: ${{ matrix.container.target_arch }}
         CI_TARGET_OS: ${{ matrix.container.os }}
         CI_TARGET_OS_VER: ${{ matrix.container.ver }}
+        CI_PLATFORM_CONTAINER: Y
 
     steps:
     - name: Checkout repo

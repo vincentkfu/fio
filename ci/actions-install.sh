@@ -9,8 +9,12 @@ SCRIPT_DIR=$(dirname "$0")
 install_ubuntu() {
     local pkgs
 
-    apt update
-    apt -y install sudo
+
+    if [ "${CI_PLATFORM_CONTAINER}" != "" ]; then
+	# containers run as root and do not have sudo
+    	apt update
+    	apt -y install sudo
+    fi
 
     cat <<DPKGCFG | sudo tee /etc/dpkg/dpkg.cfg.d/dpkg-speedup > /dev/null
 # Skip fsync
