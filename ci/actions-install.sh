@@ -9,6 +9,9 @@ SCRIPT_DIR=$(dirname "$0")
 install_ubuntu() {
     local pkgs
 
+    apt update
+    apt -y install sudo
+
     cat <<DPKGCFG | sudo tee /etc/dpkg/dpkg.cfg.d/dpkg-speedup > /dev/null
 # Skip fsync
 force-unsafe-io
@@ -17,6 +20,8 @@ path-exclude=/usr/share/man/*
 path-exclude=/usr/share/locale/*/LC_MESSAGES/*.mo
 path-exclude=/usr/share/doc/*
 DPKGCFG
+
+    sudo apt -y install build-essential cmake pkg-config unzip wget zlib1g-dev
     # Packages available on i686 and x86_64
     pkgs=(
         libaio-dev
@@ -75,6 +80,14 @@ DPKGCFG
         # install librpma from sources
         ci/actions-install-librpma.sh
     fi
+}
+
+install_fedora() {
+	echo "install_fedora"
+}
+
+install_debian() {
+	echo "install_debian"
 }
 
 install_linux() {
