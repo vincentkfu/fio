@@ -10,7 +10,7 @@ install_ubuntu() {
     local pkgs
 
 
-    if [ "${CI_PLATFORM_CONTAINER}" != "" ]; then
+    if [ "${CI_PLATFORM_CONTAINER-}" != "" ]; then
 	# containers run as root and do not have sudo
     	apt update
     	apt -y install sudo
