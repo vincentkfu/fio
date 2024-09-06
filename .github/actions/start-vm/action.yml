@@ -1,0 +1,70 @@
+name: 'Start QEMU VM'
+description: 'Start QEMU virtual machine'
+
+inputs:
+  qemu: # QEMU binary to use
+    required: false
+    default: "qemu-system-x86_64"
+  image: # VM image file
+    required: true
+  ssh_fwd_port: # forward this host port to the guest's SSH port
+    required: false
+    default: 2022
+  options: # Custom QEMU invocation options no \n at the end!
+    required: false
+  ram: # how much RAM to allocate to VM
+    required: false
+    default: "12G"
+  host_key: # If true add guest host key to known_hosts
+    required: false
+    default: "false"
+  build_fio: # If true clone and build fio on guest
+    required: false
+    default: "false"
+
+runs:
+  using: "composite"
+  steps:
+    - name: install wait-for-it
+      run: sudo apt-get -qq install wait-for-it
+      shell: bash
+    - name: Start VM in background
+      run: |
+        ${{ inputs.qemu }} \
+          -cpu host \
+          -drive file=${{ inputs.image }},format=raw,if=virtio \
+          -enable-kvm \
+          -smp $(nproc) \
+          -nographic \
+          -m ${{ inputs.ram }} \
+          -display none \
+          -machine q35,accel=kvm \
+          -nic user,model=virtio-net-pci,hostfwd=tcp::${{ inputs.ssh_fwd_port }}-:22 \
+          ${{ inputs.options }} \
+          &
+      shell: bash
+      env:
+        SSHCMD: ssh root@localhost -p ${{ inputs.ssh_fwd_port }}
+    - name: Wait for VM to boot
+      run: wait-for-it localhost:${{ inputs.ssh_fwd_port }} -t 15
+      shell: bash
+    - name: Add guest host key to known_hosts
+      run: |
+        if echo ${{ inputs.host_key }} | grep -c "true"
+        then
+          $SSHCMD -o StrictHostKeyChecking=no echo
+        fi
+      shell: bash
+      env:
+        SSHCMD: ssh root@localhost -p ${{ inputs.ssh_fwd_port }}
+    - name: Clone and build fio on guest # fake a GHA environment to use checkout-action
+      run: |
+        if echo ${{ inputs.build_fio }} | grep -c "true"
+        then
+          $SSHCMD "git clone https://github.com/taiki-e/checkout-action --branch v1.3.0"
+          $SSHCMD "mkdir fio && cd fio && ../checkout-action/main.sh && git log -1 && make -j $(nproc)"
+        fi
+      shell: bash
+      env:
+        SSHCMD: ssh root@localhost -p ${{ inputs.ssh_fwd_port }}
+
