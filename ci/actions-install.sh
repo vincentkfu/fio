@@ -83,7 +83,7 @@ DPKGCFG
 	python3-statsmodels
 	sudo
     )
-    if [ "${GITHUB_JOB}" == "build-containers" ]; then
+    if [ "${GITHUB_JOB}" == "build-containers" ] || [ "${GITHUB_JOB}" == "qemu-guest" ]; then
         pkgs+=(
             bison
             build-essential
