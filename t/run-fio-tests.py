@@ -1084,6 +1084,22 @@ TEST_LIST = [
         'success':          SUCCESS_DEFAULT,
         'requirements':     [Requirements.linux, Requirements.nvmecdev],
     },
+    {
+        'test_id':          1016,
+        'test_class':       FioExeTest,
+        'exe':              't/nvmept_pi.py',
+        'parameters':       ['-f', '{fio_path}', '--dut', '{nvmepicdev}'],
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [Requirements.linux, Requirements.nvmepicdev],
+    },
+    {
+        'test_id':          1017,
+        'test_class':       FioExeTest,
+        'exe':              't/nvmept_fdp.py',
+        'parameters':       ['-f', '{fio_path}', '--dut', '{nvmefdpcdev}'],
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [Requirements.linux, Requirements.nvmefdpcdev],
+    },
 ]
 
 
@@ -1109,6 +1125,10 @@ def parse_args():
                         help='pass-through an argument to an executable test')
     parser.add_argument('--nvmecdev', action='store', default=None,
                         help='NVMe character device for **DESTRUCTIVE** testing (e.g., /dev/ng0n1)')
+    parser.add_argument('--nvmepicdev', action='store', default=None,
+                        help='NVMe character device for **DESTRUCTIVE** protection informaton testing (e.g., /dev/ng0n1)')
+    parser.add_argument('--nvmefdpcdev', action='store', default=None,
+                        help='NVMe character device for **DESTRUCTIVE** FDP testing (e.g., /dev/ng0n1)')
     args = parser.parse_args()
 
     return args

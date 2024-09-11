@@ -430,7 +430,7 @@ def run_fio_tests(test_list, test_env, args):
             exe_path = os.path.join(test_env['fio_root'], config['exe'])
             parameters = []
             if config['parameters']:
-                parameters = [p.format(fio_path=test_env['fio_path'], nvmecdev=args.nvmecdev)
+                parameters = [p.format(fio_path=test_env['fio_path'], **vars(args))
                               for p in config['parameters']]
             if Path(exe_path).suffix == '.py' and platform.system() == "Windows":
                 parameters.insert(0, exe_path)

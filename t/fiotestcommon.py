@@ -60,6 +60,8 @@ class Requirements():
     _unittests = False
     _cpucount4 = False
     _nvmecdev = False
+    _nvmefdpcdev = False
+    _nvmepicdev = False
 
     def __init__(self, fio_root, args):
         Requirements._not_macos = platform.system() != "Darwin"
@@ -102,6 +104,8 @@ class Requirements():
 
         Requirements._cpucount4 = multiprocessing.cpu_count() >= 4
         Requirements._nvmecdev = args.nvmecdev
+        Requirements._nvmepicdev = args.nvmepicdev
+        Requirements._nvmefdpcdev = args.nvmefdpcdev
 
         req_list = [
                 Requirements.linux,
@@ -115,6 +119,8 @@ class Requirements():
                 Requirements.unittests,
                 Requirements.cpucount4,
                 Requirements.nvmecdev,
+                Requirements.nvmepicdev,
+                Requirements.nvmefdpcdev,
                     ]
         for req in req_list:
             value, desc = req()
@@ -174,3 +180,13 @@ class Requirements():
     def nvmecdev(cls):
         """Do we have an NVMe character device to test?"""
         return Requirements._nvmecdev, "NVMe character device test target required"
+
+    @classmethod
+    def nvmepicdev(cls):
+        """Do we have an NVMe character device for protection information testing?"""
+        return Requirements._nvmepicdev, "NVMe character device protection information test target required"
+
+    @classmethod
+    def nvmefdpcdev(cls):
+        """Do we have an NVMe character device for FDP testing?"""
+        return Requirements._nvmefdpcdev, "NVMe character device FDP test target required"
