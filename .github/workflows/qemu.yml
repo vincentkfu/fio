@@ -46,8 +46,9 @@ jobs:
 
     env:
       DISTRO: debian-12
-      PKGS: git,libaio-dev,libcunit1-dev,libcurl4-openssl-dev,libfl-dev,libnuma-dev,libnfs-dev,valgrind,libglusterfs-dev,libgoogle-perftools-dev,libiscsi-dev,libnbd-dev,libpmem-dev,libpmem2-dev,libprotobuf-c-dev,librbd-dev,libtcmalloc-minimal4,libibverbs-dev,librdmacm-dev,nvme-cli,pkgconf,python3-scipy,python3-sphinx,python3-statsmodels,bison,build-essential,cmake,flex,unzip,wget,zlib1g-dev,sudo
       SSHCMD: ssh root@localhost -p 2022
+      CI_TARGET_BUILD: linux
+      CI_TARGET_OS: debian
 
     steps:
     - name: Check out repository
@@ -57,18 +58,19 @@ jobs:
       uses: ./.github/actions/create-guest-image
       with:
         distro: ${{ env.DISTRO }}
-        packages: ${{ env.PKGS }}
 
     - name: Build and install QEMU
       uses: ./.github/actions/build-qemu
 
     - name: Create backing file for NVMe device
       run: truncate -s 1G nvme0.img
+
     - name: Start VM and clone/build fio
       uses: ./.github/actions/start-vm
       with:
         image: ${{ env.DISTRO }}.img
         host_key: true
+        install_fio_deps: true
         build_fio: true
         options: ${{ matrix.device }}
 

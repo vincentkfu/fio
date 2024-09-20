@@ -2,9 +2,6 @@ name: 'Create guest image'
 description: 'Create VM guest image on Ubuntu runner'
 
 inputs:
-  packages:
-    description: 'Packages to install in guest image'
-    required: true
   distro:
     description: 'Linux distribution to use for guest image'
     required: false
@@ -35,6 +32,9 @@ runs:
           --append-line '/etc/environment:GITHUB_REPOSITORY=${{ github.repository }}' \
           --append-line '/etc/environment:GITHUB_REF=${{ github.ref }}' \
           --append-line '/etc/environment:GITHUB_SHA=${{ github.sha }}' \
-          --install ${{ inputs.packages }}
+          --append-line '/etc/environment:GITHUB_JOB=${{ github.job }}' \
+          --append-line '/etc/environment:CI_TARGET_BUILD=${{ env.CI_TARGET_BUILD }}' \
+          --append-line '/etc/environment:CI_TARGET_OS=${{ env.CI_TARGET_OS }}'
+
       shell: bash
 

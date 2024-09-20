@@ -18,6 +18,9 @@ inputs:
   host_key: # If true add guest host key to known_hosts
     required: false
     default: "false"
+  install_fio_deps: # If true install dependencies for building fio
+    required: false
+    default: "false"
   build_fio: # If true clone and build fio on guest
     required: false
     default: "false"
@@ -57,12 +60,32 @@ runs:
       shell: bash
       env:
         SSHCMD: ssh root@localhost -p ${{ inputs.ssh_fwd_port }}
-    - name: Clone and build fio on guest # fake a GHA environment to use checkout-action
+    - name: Clone fio on guest # fake a GHA environment to use checkout-action
       run: |
         if echo ${{ inputs.build_fio }} | grep -c "true"
         then
+          $SSHCMD "apt-get update && apt-get install -qq git"
           $SSHCMD "git clone https://github.com/taiki-e/checkout-action --branch v1.3.0"
-          $SSHCMD "mkdir fio && cd fio && ../checkout-action/main.sh && git log -1 && make -j $(nproc)"
+          $SSHCMD "mkdir fio && cd fio && ../checkout-action/main.sh && git log -1"
+        fi
+      shell: bash
+      env:
+        SSHCMD: ssh root@localhost -p ${{ inputs.ssh_fwd_port }}
+    - name: Install fio dependencies # fake a GHA environment
+      run: |
+        if echo ${{ inputs.build_fio }} | grep -c "true"
+        then
+          $SSHCMD "apt-get install -qq nvme-cli"
+          $SSHCMD "cd fio && ./ci/actions-install.sh"
+        fi
+      shell: bash
+      env:
+        SSHCMD: ssh root@localhost -p ${{ inputs.ssh_fwd_port }}
+    - name: Build fio on guest
+      run: |
+        if echo ${{ inputs.build_fio }} | grep -c "true"
+        then
+          $SSHCMD "cd fio && git log -1 && make -j $(nproc)"
         fi
       shell: bash
       env:

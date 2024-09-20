@@ -9,8 +9,8 @@ SCRIPT_DIR=$(dirname "$0")
 install_ubuntu() {
     local pkgs
 
-    if [ "${GITHUB_JOB}" == "build-containers" ]; then
-        # containers run as root and do not have sudo
+    if [ "${GITHUB_JOB}" == "build-containers" ] || [ "${GITHUB_JOB}" == "qemu-guest" ]; then
+        # containers and guest VMs run as root and do not have sudo
         apt update
         apt -y install sudo
     fi
@@ -80,7 +80,7 @@ DPKGCFG
 	python3-sphinx
 	python3-statsmodels
     )
-    if [ "${GITHUB_JOB}" == "build-containers" ]; then
+    if [ "${GITHUB_JOB}" == "build-containers" ] || [ "${GITHUB_JOB}" == "qemu-guest" ]; then
         pkgs+=(
             bison
             build-essential
