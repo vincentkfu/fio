@@ -18,9 +18,6 @@ inputs:
   host_key: # If true add guest host key to known_hosts
     required: false
     default: "false"
-  install_fio_deps: # If true install dependencies for building fio
-    required: false
-    default: "false"
   build_fio: # If true clone and build fio on guest
     required: false
     default: "false"
@@ -28,10 +25,15 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: install wait-for-it
-      run: sudo apt-get -qq install wait-for-it
+    - name: set ssh command
       shell: bash
+      id: ssh
+      run: echo "CMD=ssh root@localhost -p ${{ inputs.ssh_fwd_port }}" >> "${GITHUB_OUTPUT}"
+    - name: install wait-for-it
+      shell: bash
+      run: sudo apt-get -qq install wait-for-it
     - name: Start VM in background
+      shell: bash
       run: |
         ${{ inputs.qemu }} \
           -cpu host \
@@ -45,49 +47,25 @@ runs:
           -nic user,model=virtio-net-pci,hostfwd=tcp::${{ inputs.ssh_fwd_port }}-:22 \
           ${{ inputs.options }} \
           &
-      shell: bash
-      env:
-        SSHCMD: ssh root@localhost -p ${{ inputs.ssh_fwd_port }}
     - name: Wait for VM to boot
-      run: wait-for-it localhost:${{ inputs.ssh_fwd_port }} -t 15
       shell: bash
+      run: wait-for-it localhost:${{ inputs.ssh_fwd_port }} -t 15
     - name: Add guest host key to known_hosts
+      shell: bash
       run: |
         if echo ${{ inputs.host_key }} | grep -c "true"
         then
-          $SSHCMD -o StrictHostKeyChecking=no echo
+          ${{ steps.ssh.outputs.CMD }} -o StrictHostKeyChecking=no echo
         fi
-      shell: bash
-      env:
-        SSHCMD: ssh root@localhost -p ${{ inputs.ssh_fwd_port }}
     - name: Clone fio on guest # fake a GHA environment to use checkout-action
+      shell: bash
       run: |
         if echo ${{ inputs.build_fio }} | grep -c "true"
         then
-          $SSHCMD "apt-get update && apt-get install -qq git"
-          $SSHCMD "git clone https://github.com/taiki-e/checkout-action --branch v1.3.0"
-          $SSHCMD "mkdir fio && cd fio && ../checkout-action/main.sh && git log -1"
+          ${{ steps.ssh.outputs.cmd }} "apt-get update && apt-get install -qq git"
+          ${{ steps.ssh.outputs.cmd }} "git clone https://github.com/taiki-e/checkout-action --branch v1.3.0"
+          ${{ steps.ssh.outputs.cmd }} "mkdir fio && cd fio && ../checkout-action/main.sh && git log -1"
+          ${{ steps.ssh.outputs.cmd }} "apt-get install -qq nvme-cli"
+          ${{ steps.ssh.outputs.cmd }} "cd fio && ./ci/actions-install.sh"
+          ${{ steps.ssh.outputs.cmd }} "cd fio && make -j $(nproc)"
         fi
-      shell: bash
-      env:
-        SSHCMD: ssh root@localhost -p ${{ inputs.ssh_fwd_port }}
-    - name: Install fio dependencies # fake a GHA environment
-      run: |
-        if echo ${{ inputs.build_fio }} | grep -c "true"
-        then
-          $SSHCMD "apt-get install -qq nvme-cli"
-          $SSHCMD "cd fio && ./ci/actions-install.sh"
-        fi
-      shell: bash
-      env:
-        SSHCMD: ssh root@localhost -p ${{ inputs.ssh_fwd_port }}
-    - name: Build fio on guest
-      run: |
-        if echo ${{ inputs.build_fio }} | grep -c "true"
-        then
-          $SSHCMD "cd fio && git log -1 && make -j $(nproc)"
-        fi
-      shell: bash
-      env:
-        SSHCMD: ssh root@localhost -p ${{ inputs.ssh_fwd_port }}
-

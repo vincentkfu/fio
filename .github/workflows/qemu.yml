@@ -70,7 +70,6 @@ jobs:
       with:
         image: ${{ env.DISTRO }}.img
         host_key: true
-        install_fio_deps: true
         build_fio: true
         options: ${{ matrix.device }}
 
