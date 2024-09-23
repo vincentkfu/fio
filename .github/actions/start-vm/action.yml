@@ -65,7 +65,6 @@ runs:
           ${{ steps.ssh.outputs.CMD }} "apt-get update && apt-get install -qq git"
           ${{ steps.ssh.outputs.CMD }} "git clone https://github.com/taiki-e/checkout-action --branch v1.3.0"
           ${{ steps.ssh.outputs.CMD }} "mkdir fio && cd fio && ../checkout-action/main.sh && git log -1"
-          ${{ steps.ssh.outputs.CMD }} "apt-get install -qq nvme-cli"
           ${{ steps.ssh.outputs.CMD }} "cd fio && ./ci/actions-install.sh"
           ${{ steps.ssh.outputs.CMD }} "cd fio && ./ci/actions-build.sh"
         fi

@@ -17,25 +17,29 @@ jobs:
               -device nvme,id=nvme0,serial=deadbeef
               -drive id=nvm-0,file=nvme0.img,format=raw,if=none,discard=unmap,media=disk
               -device nvme-ns,id=nvm-0,drive=nvm-0,bus=nvme0,nsid=1
-            test_cmd: "python3 t/run-fio-tests.py --nvmecdev /dev/ng0n1 --run-only 1014 1015" 
+            test_cmd: "python3 t/run-fio-tests.py --nvmecdev /dev/ng0n1 --run-only 1014 1015"
+            extra_pkgs: "nvme-cli"
           - config: 16-bit Guard PI tests (long)
             device: >-
               -device nvme,id=nvme0,serial=deadbeef
               -drive id=nvm-0,file=nvme0.img,format=raw,if=none,discard=unmap,media=disk
               -device nvme-ns,id=nvm-0,drive=nvm-0,bus=nvme0,nsid=1
             test_cmd: "python3 t/nvmept_pi.py --fio ./fio --dut /dev/ng0n1"
+            extra_pkgs: "nvme-cli"
           - config: 4K+16 w/64-bit Guard PI
             device: >- # 4K+16 w/64-bit Guard PI
               -device nvme,id=nvme1,serial=deadbeee
               -drive id=nvm-1,file=nvme0.img,format=raw,if=none,discard=unmap,media=disk
               -device nvme-ns,id=nvm-1,drive=nvm-1,bus=nvme1,nsid=1,pif=2,ms=16,mset=1,pi=1,pil=0,logical_block_size=4096,physical_block_size=4096
             test_cmd: "python3 t/nvmept_pi.py --fio ./fio --dut /dev/ng0n1 --lbaf 6"
+            extra_pkgs: "nvme-cli"
           - config: 4K+64 w/64-bit Guard PI
             device: >-
               -device nvme,id=nvme2,serial=deadeeef
               -drive id=nvm-2,file=nvme0.img,format=raw,if=none,discard=unmap,media=disk
               -device nvme-ns,id=nvm-2,drive=nvm-2,bus=nvme2,nsid=1,pif=2,ms=64,mset=1,pi=1,pil=0,logical_block_size=4096,physical_block_size=4096
             test_cmd: "python3 t/nvmept_pi.py --fio ./fio --dut /dev/ng0n1 --lbaf 7"
+            extra_pkgs: "nvme-cli"
           - config: FDP
             device: >-
               -device nvme-subsys,id=nvme-subsys0,fdp=on,fdp.runs=128K,fdp.nrg=8,fdp.nruh=64
@@ -43,6 +47,7 @@ jobs:
               -drive id=nvm-1,file=nvme0.img,format=raw,if=none,discard=unmap,media=disk
               -device nvme-ns,id=nvm-1,drive=nvm-1,bus=nvme0,nsid=1,logical_block_size=4096,physical_block_size=4096,fdp.ruhs=0-63
             test_cmd: "nvme fdp status /dev/ng0n1 && python3 t/nvmept_fdp.py --fio ./fio --dut /dev/ng0n1"
+            extra_pkgs: "nvme-cli"
 
     env:
       DISTRO: debian-12
@@ -58,6 +63,7 @@ jobs:
       uses: ./.github/actions/create-guest-image
       with:
         distro: ${{ env.DISTRO }}
+        extra_pkgs: ${{ matrix.extra_pkgs }}
 
     - name: Build and install QEMU
       uses: ./.github/actions/build-qemu
