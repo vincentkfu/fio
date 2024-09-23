@@ -67,5 +67,5 @@ runs:
           ${{ steps.ssh.outputs.CMD }} "mkdir fio && cd fio && ../checkout-action/main.sh && git log -1"
           ${{ steps.ssh.outputs.CMD }} "apt-get install -qq nvme-cli"
           ${{ steps.ssh.outputs.CMD }} "cd fio && ./ci/actions-install.sh"
-          ${{ steps.ssh.outputs.CMD }} "cd fio && make -j $(nproc)"
+          ${{ steps.ssh.outputs.CMD }} "cd fio && ./ci/actions-build.sh"
         fi
