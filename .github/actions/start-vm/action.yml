@@ -49,7 +49,9 @@ runs:
           &
     - name: Wait for VM to boot
       shell: bash
-      run: wait-for-it localhost:${{ inputs.ssh_fwd_port }} -t 15
+      run: |
+        wait-for-it localhost:${{ inputs.ssh_fwd_port }} -t 15
+        sleep 3
     - name: Add guest host key to known_hosts
       shell: bash
       run: |
