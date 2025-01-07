@@ -62,6 +62,7 @@ static int sum_stat_nr;
 static struct buf_output allclients;
 static struct json_object *root = NULL;
 static struct json_object *global_opt_object = NULL;
+static struct json_array *global_opt_array = NULL;
 static struct json_array *clients_array = NULL;
 static struct json_array *du_array = NULL;
 
@@ -189,8 +190,13 @@ static void fio_client_json_init(void)
 	json_object_add_value_int(root, "timestamp", time_p);
 	json_object_add_value_string(root, "time", time_buf);
 
-	global_opt_object = json_create_object();
-	json_object_add_value_object(root, "global options", global_opt_object);
+	if (nr_clients == 1) {
+		global_opt_object = json_create_object();
+		json_object_add_value_object(root, "global options", global_opt_object);
+	} else {
+		global_opt_array = json_create_array();
+		json_object_add_value_array(root, "global options", global_opt_array);
+	}
 	clients_array = json_create_array();
 	json_object_add_value_array(root, "client_stats", clients_array);
 	du_array = json_create_array();
@@ -216,6 +222,7 @@ static void fio_client_json_fini(void)
 	json_free_object(root);
 	root = NULL;
 	global_opt_object = NULL;
+	global_opt_array = NULL;
 	clients_array = NULL;
 	du_array = NULL;
 }
@@ -376,6 +383,7 @@ static struct fio_client *get_new_client(void)
 	INIT_FLIST_HEAD(&client->arg_list);
 	INIT_FLIST_HEAD(&client->eta_list);
 	INIT_FLIST_HEAD(&client->cmd_list);
+	INIT_FLIST_HEAD(&client->global_opt_list);
 
 	buf_output_init(&client->buf);
 
@@ -1116,11 +1124,32 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 		opt_list = &client->opt_lists[p->ts.thread_number - 1];
 
 	tsobj = show_thread_status(&p->ts, &p->rs, opt_list, &client->buf);
-	client->did_stat = true;
 	if (tsobj) {
 		json_object_add_client_info(tsobj, client);
 		json_array_add_value_object(clients_array, tsobj);
+		if (!client->did_stat) {
+			static struct json_object *job_opts;
+
+			if (nr_clients == 1)
+				job_opts = global_opt_object;
+			else {
+				job_opts = json_create_object();
+
+				json_object_add_client_info(job_opts, client);
+				json_array_add_value_object(global_opt_array, job_opts);
+			}
+
+			if (!flist_empty(&client->global_opt_list)) {
+				struct flist_head *entry;
+				struct print_option *p;
+				flist_for_each(entry, &client->global_opt_list) {
+					p = flist_entry(entry, struct print_option, list);
+					json_object_add_value_string(job_opts, p->name, p->value);
+				}
+			}
+		}
 	}
+	client->did_stat = true;
 
 	if (sum_stat_clients <= 1)
 		return;
@@ -1165,28 +1194,25 @@ static void handle_gs(struct fio_client *client, struct fio_net_cmd *cmd)
 static void handle_job_opt(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_job_option *pdu = (struct cmd_job_option *) cmd->payload;
+	struct flist_head *opt_list;
+	struct print_option *p;
 
 	pdu->global = le16_to_cpu(pdu->global);
 	pdu->truncated = le16_to_cpu(pdu->truncated);
 	pdu->groupid = le32_to_cpu(pdu->groupid);
 
-	if (pdu->global) {
-		if (!global_opt_object)
-			return;
+	if (pdu->global)
+		opt_list = &client->global_opt_list;
+	else if (client->opt_lists)
+		opt_list = &client->opt_lists[pdu->groupid];
+	else
+		return;
 
-		json_object_add_value_string(global_opt_object,
-					     (const char *)pdu->name,
-					     (const char *)pdu->value);
-	} else if (client->opt_lists) {
-		struct flist_head *opt_list = &client->opt_lists[pdu->groupid];
-		struct print_option *p;
-
-		p = malloc(sizeof(*p));
-		p->name = strdup((const char *)pdu->name);
-		p->value = pdu->value[0] ? strdup((const char *)pdu->value) :
-			NULL;
-		flist_add_tail(&p->list, opt_list);
-	}
+	p = malloc(sizeof(*p));
+	p->name = strdup((const char *)pdu->name);
+	p->value = pdu->value[0] ? strdup((const char *)pdu->value) :
+		NULL;
+	flist_add_tail(&p->list, opt_list);
 }
 
 static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd)

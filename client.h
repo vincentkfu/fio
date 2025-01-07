@@ -42,6 +42,8 @@ struct fio_client {
 	char *name;
 
 	struct flist_head *opt_lists;
+	struct flist_head global_opt_list;
+	bool global_opts_done;
 
 	int state;
 
