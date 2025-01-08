@@ -383,7 +383,6 @@ static struct fio_client *get_new_client(void)
 	INIT_FLIST_HEAD(&client->arg_list);
 	INIT_FLIST_HEAD(&client->eta_list);
 	INIT_FLIST_HEAD(&client->cmd_list);
-	INIT_FLIST_HEAD(&client->global_opt_list);
 
 	buf_output_init(&client->buf);
 
@@ -1127,27 +1126,8 @@ static void handle_ts(struct fio_client *client, struct fio_net_cmd *cmd)
 	if (tsobj) {
 		json_object_add_client_info(tsobj, client);
 		json_array_add_value_object(clients_array, tsobj);
-		if (!client->did_stat) {
-			static struct json_object *job_opts;
-
-			if (nr_clients == 1)
-				job_opts = global_opt_object;
-			else {
-				job_opts = json_create_object();
-
-				json_object_add_client_info(job_opts, client);
-				json_array_add_value_object(global_opt_array, job_opts);
-			}
-
-			if (!flist_empty(&client->global_opt_list)) {
-				struct flist_head *entry;
-				struct print_option *p;
-				flist_for_each(entry, &client->global_opt_list) {
-					p = flist_entry(entry, struct print_option, list);
-					json_object_add_value_string(job_opts, p->name, p->value);
-				}
-			}
-		}
+		if (!client->did_stat && client->global_opts)
+			json_array_add_value_object(global_opt_array, client->global_opts);
 	}
 	client->did_stat = true;
 
@@ -1194,25 +1174,47 @@ static void handle_gs(struct fio_client *client, struct fio_net_cmd *cmd)
 static void handle_job_opt(struct fio_client *client, struct fio_net_cmd *cmd)
 {
 	struct cmd_job_option *pdu = (struct cmd_job_option *) cmd->payload;
-	struct flist_head *opt_list;
-	struct print_option *p;
 
 	pdu->global = le16_to_cpu(pdu->global);
 	pdu->truncated = le16_to_cpu(pdu->truncated);
 	pdu->groupid = le32_to_cpu(pdu->groupid);
 
-	if (pdu->global)
-		opt_list = &client->global_opt_list;
-	else if (client->opt_lists)
-		opt_list = &client->opt_lists[pdu->groupid];
-	else
-		return;
+	if (pdu->global) {
+		struct json_object *global_opts;
 
-	p = malloc(sizeof(*p));
-	p->name = strdup((const char *)pdu->name);
-	p->value = pdu->value[0] ? strdup((const char *)pdu->value) :
-		NULL;
-	flist_add_tail(&p->list, opt_list);
+		if (!global_opt_object && !global_opt_array)
+			return;
+
+		/*
+		 * If we have only one server connection, add it to the single
+		 * global option dictionary. When we have connections to
+		 * multiple servers, add the global option to the
+		 * server-specific dictionary.
+		 */
+		if (global_opt_object) {
+			global_opts = global_opt_object;
+		} else {
+			if (!client->global_opts) {
+				client->global_opts = json_create_object();
+				json_object_add_client_info(client->global_opts, client);
+			}
+			global_opts = client->global_opts;
+		}
+
+		json_object_add_value_string(global_opts,
+					     (const char *)pdu->name,
+					     (const char *)pdu->value);
+		return;
+	} else if (client->opt_lists) {
+		struct flist_head *opt_list = &client->opt_lists[pdu->groupid];
+		struct print_option *p;
+
+		p = malloc(sizeof(*p));
+		p->name = strdup((const char *)pdu->name);
+		p->value = pdu->value[0] ? strdup((const char *)pdu->value) :
+			NULL;
+		flist_add_tail(&p->list, opt_list);
+	}
 }
 
 static void handle_text(struct fio_client *client, struct fio_net_cmd *cmd)
