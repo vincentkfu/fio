@@ -14,6 +14,10 @@
 # REQUIREMENTS
 # Python 3.6
 #
+# This will start fio server instances listening on the interfaces below and
+# will break if any ports are already occupied.
+#
+#
 """
 import os
 import sys
@@ -23,12 +27,16 @@ import logging
 import argparse
 import tempfile
 import subprocess
+import configparser
 from pathlib import Path
 from fiotestlib import FioJobCmdTest, run_fio_tests
 
 
-PORT_LIST = [
+SERVER_LIST = [
             ",8765",
+            ",8766",
+            ",8767",
+            ",8768",
         ]
 
 PIDFILE_LIST = []
@@ -42,23 +50,13 @@ class ClientServerTest(FioJobCmdTest):
         """Setup a test."""
 
         fio_args = [
-            "--name=client-server",
-            "--ioengine=io_uring_cmd",
-            "--cmd_type=nvme",
-            "--iodepth=8",
-            "--iodepth_batch=4",
-            "--iodepth_batch_complete=4",
-            f"--filename={self.fio_opts['filename']}",
-            f"--rw={self.fio_opts['rw']}",
             f"--output={self.filenames['output']}",
             f"--output-format={self.fio_opts['output-format']}",
         ]
-        for opt in ['fixedbufs', 'nonvectored', 'force_async', 'registerfiles',
-                    'sqthread_poll', 'sqthread_poll_cpu', 'hipri', 'nowait',
-                    'time_based', 'runtime', 'verify', 'io_size']:
-            if opt in self.fio_opts:
-                option = f"--{opt}={self.fio_opts[opt]}"
-                fio_args.append(option)
+        for server in self.fio_opts['servers']:
+            option = f"--client={server['client']}"
+            fio_args.append(option)
+            fio_args.append(server['jobfile'])
 
         super().setup(fio_args)
 
@@ -66,13 +64,93 @@ class ClientServerTest(FioJobCmdTest):
     def check_result(self):
         super().check_result()
 
+
+class ClientServerTestGlobalSingle(ClientServerTest):
+    """
+    Client/sever test class.
+    One server connection only.
+    The job file may or may not have a global section.
+    """
+
+    def check_result(self):
+        super().check_result()
+
+        config = configparser.ConfigParser(allow_no_value=True)
+        config.read(self.fio_opts['servers'][0]['jobfile'])
+        
+        if not config.has_section('global'):
+            if len(self.json_data['global options']) > 0:
+                self.failure_reason = f"{self.failure_reason} non-empty 'global options' dictionary found with no global section in job file."
+                self.passed = False
+            return
+
+        if len(self.json_data['global options']) == 0:
+            self.failure_reason = f"{self.failure_reason} empty 'global options' dictionary found with no global section in job file."
+            self.passed = False
+
+        # Now make sure global section options match 'global options'
+        job_file_global = dict(config['global'])
+        for key in job_file_global.keys():
+            if job_file_global[key] == None:
+                job_file_global[key] = ""
+        if job_file_global != self.json_data['global options']:
+            self.failure_reason = f"{self.failure_reason} 'global options' dictionary does not match global section in job file."
+            self.passed = False
+
+
+
 TEST_LIST = [
-    {
+    {   # Smoke test
         "test_id": 1,
         "fio_opts": {
             "output-format": "json",
+            "servers": [
+                    {   
+                        "client" : 0, # index into the SERVER_LIST array
+                        "jobfile": "test1.fio",
+                    }, 
+                ]
             },
         "test_class": ClientServerTest,
+    },
+    {   # try another client
+        "test_id": 2,
+        "fio_opts": {
+            "output-format": "json",
+            "servers": [
+                    {
+                        "client" : 1,
+                        "jobfile": "test1.fio",
+                    }, 
+                ]
+            },
+        "test_class": ClientServerTest,
+    },
+    {   # single client global section
+        "test_id": 3,
+        "fio_opts": {
+            "output-format": "json",
+            "servers": [
+                    {
+                        "client" : 2,
+                        "jobfile": "test1.fio",
+                    }, 
+                ]
+            },
+        "test_class": ClientServerTestGlobalSingle,
+    },
+    {   # single client no global section
+        "test_id": 4,
+        "fio_opts": {
+            "output-format": "json",
+            "servers": [
+                    {
+                        "client" : 3,
+                        "jobfile": "test4-noglobal.fio",
+                    }, 
+                ]
+            },
+        "test_class": ClientServerTestGlobalSingle,
     },
 ]
 
@@ -80,6 +158,7 @@ def parse_args():
     """Parse command-line arguments."""
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', help='Enable debug messages', action='store_true')
     parser.add_argument('-f', '--fio', help='path to file executable (e.g., ./fio)')
     parser.add_argument('-a', '--artifact-root', help='artifact root directory')
     parser.add_argument('-s', '--skip', nargs='+', type=int,
@@ -91,19 +170,20 @@ def parse_args():
     return args
 
 
-def start_servers(fio_path, ports=PORT_LIST):
+def start_servers(fio_path, servers=SERVER_LIST):
     """Start servers for our tests."""
 
-    for port in ports:
+    for server in servers:
         tmpfile = tempfile.mktemp()
-        cmd = f"sudo {fio_path} --server={port} --daemonize={tmpfile}"
+        cmd = f"sudo {fio_path} --server={server} --daemonize={tmpfile}"
         cmd = cmd.split(' ')
         cmd_result = subprocess.run(cmd, capture_output=True, check=False,
                                    encoding=locale.getpreferredencoding())
         if cmd_result.returncode != 0:
-            logging.error("Unable to start server on %s: %s", port, cmd_result.stderr)
+            logging.error("Unable to start server on %s: %s", server, cmd_result.stderr)
             return False
 
+        logging.debug("Started server %s" % server)
         PIDFILE_LIST.append(tmpfile)
 
     return True
@@ -123,6 +203,7 @@ def stop_servers(pidfiles=PIDFILE_LIST):
         if cmd_result.returncode != 0:
             logging.error("Unable to kill server with PID %s: %s", pid, cmd_result.stderr)
             return False
+        logging.debug("Sent stop signal to PID %s" % pid)
 
     return True
 
@@ -132,6 +213,11 @@ def main():
 
     args = parse_args()
 
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
     artifact_root = args.artifact_root if args.artifact_root else \
         f"client-server-test-{time.strftime('%Y%m%d-%H%M%S')}"
     os.mkdir(artifact_root)
@@ -140,15 +226,20 @@ def main():
     if args.fio:
         fio_path = str(Path(args.fio).absolute())
     else:
-        fio_path = 'fio'
+        fio_path = os.path.join(os.path.dirname(__file__), '../fio')
     print(f"fio path is {fio_path}")
 
     start_servers(fio_path)
-   
     print("Servers started")
-    time.sleep(5)
 
-    """
+    job_path = os.path.join(os.path.dirname(__file__), "client-server")
+    for test in TEST_LIST:
+        opts = test['fio_opts']
+        for server in opts['servers']:
+            server['client'] = SERVER_LIST[server['client']]
+            server['jobfile'] = os.path.join(job_path, server['jobfile'])
+        logging.debug(test)
+
     test_env = {
               'fio_path': fio_path,
               'fio_root': str(Path(__file__).absolute().parent.parent),
@@ -157,10 +248,9 @@ def main():
               }
 
     _, failed, _ = run_fio_tests(TEST_LIST, test_env, args)
-    sys.exit(failed)
-    """
 
     stop_servers()
+    sys.exit(failed)
 
 if __name__ == '__main__':
     main()
