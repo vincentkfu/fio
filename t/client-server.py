@@ -88,7 +88,8 @@ class ClientServerTestGlobalSingle(ClientServerTest):
             self.failure_reason = f"{self.failure_reason} empty 'global options' dictionary found with no global section in job file."
             self.passed = False
 
-        # Now make sure global section options match 'global options'
+        # Now make sure job file global section matches 'global options'
+        # in JSON output
         job_file_global = dict(config['global'])
         for key in job_file_global.keys():
             if job_file_global[key] == None:
@@ -97,6 +98,73 @@ class ClientServerTestGlobalSingle(ClientServerTest):
             self.failure_reason = f"{self.failure_reason} 'global options' dictionary does not match global section in job file."
             self.passed = False
 
+
+class ClientServerTestGlobalMultiple(ClientServerTest):
+    """
+    Client/sever test class.
+    Multiple server connections.
+    Job files may or may not have a global section.
+    """
+
+    def check_result(self):
+        super().check_result()
+
+        #
+        # For each job file, check if it has a global section
+        # If so, make sure the 'global options' array has
+        # as element for it.
+        # At the end, make sure the total number of elements matches the number
+        # of job files with global sections.
+        #
+
+        global_sections = 0
+        for server in self.fio_opts['servers']:
+            config = configparser.ConfigParser(allow_no_value=True)
+            config.read(server['jobfile'])
+
+            if not config.has_section('global'):
+                continue
+
+            global_sections += 1
+
+            # this can only parse one server spec format
+            [hostname, port] = server['client'].split(',')
+
+            match = None
+            for global_opts in self.json_data['global options']:
+                if 'hostname' not in global_opts:
+                    continue
+                if 'port' not in global_opts:
+                    continue
+                if global_opts['hostname'] == hostname and int(global_opts['port']) == int(port):
+                    match = global_opts
+                    break
+
+            if not match:
+                self.failure_reason = f"{self.failure_reason} matching 'global options' element not found for {hostname}, {port}."
+                self.passed = False
+                continue
+
+            del match['hostname']
+            del match['port']
+
+            # Now make sure job file global section matches 'global options'
+            # in JSON output
+            job_file_global = dict(config['global'])
+            for key in job_file_global.keys():
+                if job_file_global[key] == None:
+                    job_file_global[key] = ""
+            if job_file_global != match:
+                self.failure_reason = f"{self.failure_reason} 'global options' dictionary does not match global section in job file."
+                self.passed = False
+            else:
+                logging.debug(f"Job file global section matches 'global options' array element {server['client']}")
+
+        if global_sections != len(self.json_data['global options']):
+            self.failure_reason = f"{self.failure_reason} mismatched number of elements in 'global options' array."
+            self.passed = False
+        else:
+            logging.debug("%d elements in global options array as expected" % global_sections)
 
 
 TEST_LIST = [
@@ -152,7 +220,83 @@ TEST_LIST = [
             },
         "test_class": ClientServerTestGlobalSingle,
     },
+    {   # multiple clients, some with global, some without
+        "test_id": 5,
+        "fio_opts": {
+            "output-format": "json",
+            "servers": [
+                    {
+                        "client" : 0,
+                        "jobfile": "test4-noglobal.fio",
+                    },
+                    {
+                        "client" : 1,
+                        "jobfile": "test1.fio",
+                    },
+                    {
+                        "client" : 2,
+                        "jobfile": "test4-noglobal.fio",
+                    },
+                    {
+                        "client" : 3,
+                        "jobfile": "test1.fio",
+                    },
+                ]
+            },
+        "test_class": ClientServerTestGlobalMultiple,
+    },
+    {   # multiple clients, all with global sections
+        "test_id": 6,
+        "fio_opts": {
+            "output-format": "json",
+            "servers": [
+                    {
+                        "client" : 0,
+                        "jobfile": "test1.fio",
+                    },
+                    {
+                        "client" : 1,
+                        "jobfile": "test1.fio",
+                    },
+                    {
+                        "client" : 2,
+                        "jobfile": "test1.fio",
+                    },
+                    {
+                        "client" : 3,
+                        "jobfile": "test1.fio",
+                    },
+                ]
+            },
+        "test_class": ClientServerTestGlobalMultiple,
+    },
+    {   # multiple clients, none with global sections
+        "test_id": 7,
+        "fio_opts": {
+            "output-format": "json",
+            "servers": [
+                    {
+                        "client" : 0,
+                        "jobfile": "test4-noglobal.fio",
+                    },
+                    {
+                        "client" : 1,
+                        "jobfile": "test4-noglobal.fio",
+                    },
+                    {
+                        "client" : 2,
+                        "jobfile": "test4-noglobal.fio",
+                    },
+                    {
+                        "client" : 3,
+                        "jobfile": "test4-noglobal.fio",
+                    },
+                ]
+            },
+        "test_class": ClientServerTestGlobalMultiple,
+    },
 ]
+
 
 def parse_args():
     """Parse command-line arguments."""
@@ -238,7 +382,6 @@ def main():
         for server in opts['servers']:
             server['client'] = SERVER_LIST[server['client']]
             server['jobfile'] = os.path.join(job_path, server['jobfile'])
-        logging.debug(test)
 
     test_env = {
               'fio_path': fio_path,
