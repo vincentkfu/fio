@@ -927,11 +927,11 @@ int verify_io_u(struct thread_data *td, struct io_u **io_u_ptr)
 		hdr = p;
 
 		/*
-		 * Make rand_seed check pass when have verify_backlog or
-		 * zone reset frequency for zonemode=zbd.
+		 * Make rand_seed check pass when we have verify_backlog or
+		 * norandommap or zone reset frequency for zonemode=zbd.
 		 */
-		if (!td_rw(td) || (td->flags & TD_F_VER_BACKLOG) ||
-		    td->o.zrf.u.f)
+		if (!td_write(td) || (td->flags & TD_F_VER_BACKLOG) ||
+		    td->o.zrf.u.f || td->o.norandommap)
 			io_u->rand_seed = hdr->rand_seed;
 
 		if (td->o.verify != VERIFY_PATTERN_NO_HDR) {

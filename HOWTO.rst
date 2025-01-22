@@ -1564,11 +1564,10 @@ I/O type
 	this option is given, fio will just get a new random offset without looking
 	at past I/O history. This means that some blocks may not be read or written,
 	and that some blocks may be read/written more than once. If this option is
-	used with :option:`verify` and multiple blocksizes (via :option:`bsrange`),
-	only intact blocks are verified, i.e., partially-overwritten blocks are
-	ignored.  With an async I/O engine and an I/O depth > 1, it is possible for
-	the same block to be overwritten, which can cause verification errors.  Either
-	do not use norandommap in this case, or also use the lfsr random generator.
+	used with :option:`verify` then random seed within the special header at the
+	beginning of each block will not be verified. If this option is used with
+	:option:`verify` and multiple blocksizes (via :option:`bsrange`), only intact
+	blocks are verified, i.e., partially-overwritten blocks are ignored.
 
 .. option:: softrandommap=bool
 
@@ -3895,11 +3894,6 @@ Verification
 	given is a read or random read, fio will assume that it should verify a
 	previously written file. If the data direction includes any form of write,
 	the verify will be of the newly written data.
-
-	To avoid false verification errors, do not use the norandommap option when
-	verifying data with async I/O engines and I/O depths > 1.  Or use the
-	norandommap and the lfsr random generator together to avoid writing to the
-	same offset with multiple outstanding I/Os.
 
 .. option:: verify_offset=int
 
