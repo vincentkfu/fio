@@ -13,6 +13,8 @@
 #
 # REQUIREMENTS
 # Python 3.6
+# - Linux (libaio ioengine)
+# - 4 CPUs (test_id 5,6,7)
 #
 """
 import os
@@ -55,15 +57,24 @@ class VerifyTest(FioJobCmdTest):
                 'number_ios',
                 'output-format',
                 'directory',
+                'norandommap',
+                'numjobs',
+                'nrfiles',
+                'openfiles',
+                'cpus_allowed'
                 'verify_backlog',
                 'verify_backlog_batch',
                 'verify_interval',
+                'verify_offset',
                 'verify_async',
                 'verify_async_cpus',
             ]:
             if opt in self.fio_opts:
                 option = f"--{opt}={self.fio_opts[opt]}"
                 fio_args.append(option)
+
+        if self.fio_opts['verify'] == 'pattern':
+                fio_args.append('--verify_pattern="abcd"-120xdeadface')
 
         super().setup(fio_args)
 
@@ -82,7 +93,7 @@ TEST_LIST = [
         "test_class": VerifyTest,
     },
     {
-        # add norandommap
+        # norandommap
         "test_id": 2,
         "fio_opts": {
             "direct": 1,
@@ -91,6 +102,121 @@ TEST_LIST = [
             "filesize": "2M",
             "norandommap": 1,
             "bs": 512,
+            },
+        "test_class": VerifyTest,
+    },
+    {
+        # norandommap with verify backlog
+        "test_id": 3,
+        "fio_opts": {
+            "direct": 1,
+            "ioengine": "libaio",
+            "iodepth": 32,
+            "filesize": "2M",
+            "norandommap": 1,
+            "bs": 512,
+            "time_based": 1,
+            "runtime": 3,
+            "verify_backlog": 128,
+            "verify_backlog_batch": 64,
+            },
+        "test_class": VerifyTest,
+    },
+    {
+        # norandommap with verify offset and interval
+        "test_id": 4,
+        "fio_opts": {
+            "direct": 1,
+            "ioengine": "libaio",
+            "iodepth": 32,
+            "filesize": "2M",
+            "io_size": "4M",
+            "norandommap": 1,
+            "bs": 4096,
+            "verify_interval": 2048,
+            "verify_offset": 1024,
+            },
+        "test_class": VerifyTest,
+    },
+    {
+        # norandommap with verify offload to async threads
+        "test_id": 5,
+        "fio_opts": {
+            "direct": 1,
+            "ioengine": "libaio",
+            "iodepth": 32,
+            "filesize": "2M",
+            "norandommap": 1,
+            "bs": 4096,
+            "cpus_allowed": "0-3",
+            "verify_async": 2,
+            "verify_async_cpus": "0-1",
+            },
+        "test_class": VerifyTest,
+    },
+    {
+        # tausworthe combine all verify options
+        "test_id": 6,
+        "fio_opts": {
+            "direct": 1,
+            "ioengine": "libaio",
+            "iodepth": 32,
+            "filesize": "4M",
+            "bs": 4096,
+            "cpus_allowed": "0-3",
+            "time_based": 1,
+            "random_generator": "tausworthe",
+            "runtime": 3,
+            "verify_interval": 2048,
+            "verify_offset": 1024,
+            "verify_backlog": 128,
+            "verify_backlog_batch": 128,
+            "verify_async": 2,
+            "verify_async_cpus": "0-1",
+            },
+        "test_class": VerifyTest,
+    },
+    {
+        # norandommap combine all verify options
+        "test_id": 7,
+        "fio_opts": {
+            "direct": 1,
+            "ioengine": "libaio",
+            "iodepth": 32,
+            "filesize": "4M",
+            "norandommap": 1,
+            "bs": 4096,
+            "cpus_allowed": "0-3",
+            "time_based": 1,
+            "runtime": 3,
+            "verify_interval": 2048,
+            "verify_offset": 1024,
+            "verify_backlog": 128,
+            "verify_backlog_batch": 128,
+            "verify_async": 2,
+            "verify_async_cpus": "0-1",
+            },
+        "test_class": VerifyTest,
+    },
+    {
+        # multiple jobs and files with verify
+        "test_id": 8,
+        "fio_opts": {
+            "direct": 1,
+            "ioengine": "libaio",
+            "iodepth": 32,
+            "filesize": "512K",
+            "nrfiles": 3,
+            "openfiles": 2,
+            "numjobs": 2,
+            "norandommap": 1,
+            "bs": 4096,
+            "time_based": 1,
+            "runtime": 20,
+            "verify_interval": 2048,
+            "verify_offset": 1024,
+            "verify_backlog": 16,
+            "verify_backlog_batch": 16,
             },
         "test_class": VerifyTest,
     },
@@ -104,6 +230,7 @@ def parse_args():
     parser.add_argument('-d', '--debug', help='Enable debug messages', action='store_true')
     parser.add_argument('-f', '--fio', help='path to file executable (e.g., ./fio)')
     parser.add_argument('-a', '--artifact-root', help='artifact root directory')
+    parser.add_argument('-c', '--complete', help='Enable all checksums', action='store_true')
     parser.add_argument('-s', '--skip', nargs='+', type=int,
                         help='list of test(s) to skip')
     parser.add_argument('-o', '--run-only', nargs='+', type=int,
@@ -147,7 +274,12 @@ DDIR_LIST = [
         'randrw',
         'randread',
              ]
-CSUM_LIST = [
+CSUM_LIST1 = [
+        'md5',
+        'crc64',
+        'pattern',
+             ]
+CSUM_LIST2 = [
         'md5',
         'crc64',
         'crc32c',
@@ -161,12 +293,9 @@ CSUM_LIST = [
         'sha3-224',
         'sha3-384',
         'sha3-512',
-#        'pattern',
+        'pattern',
         'null',
              ]
-# TODO enable pattern above by adding appropriate code to verify_test()
-#   add an actual pattern and adjust fio options
-
 
 def main():
     """
@@ -200,8 +329,13 @@ def main():
 
     total = { 'passed':  0, 'failed': 0, 'skipped': 0 }
 
+    if args.complete:
+        csum_list = CSUM_LIST2
+    else:
+        csum_list = CSUM_LIST1
+
     try:
-        for ddir, csum in itertools.product(DDIR_LIST, CSUM_LIST):
+        for ddir, csum in itertools.product(DDIR_LIST, csum_list):
             print(f"\nddir: {ddir}, checksum: {csum}")
 
             test_env['artifact_root'] = os.path.join(artifact_root,
