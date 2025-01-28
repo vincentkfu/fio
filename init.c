@@ -872,10 +872,12 @@ static int fixup_options(struct thread_data *td)
 
 		/*
 		 * Disable rand_seed check when we have verify_backlog,
-		 * zone reset frequency for zonemode=zbd, or norandommap.
+		 * zone reset frequency for zonemode=zbd, norandommap, or
+		 * offset modifiers.
 		 */
 		if ((td->flags & TD_F_VER_BACKLOG) || o->zrf.u.f ||
-		    o->norandommap)
+		    o->norandommap || (o->ddir_seq_add != 0) ||
+		    (o->ddir_seq_nr > 1))
 			o->verify_header_seed = 0;
 	}
 
