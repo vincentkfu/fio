@@ -41,11 +41,6 @@ enum uring_cmd_write_mode {
 	FIO_URING_CMD_WMODE_VERIFY,
 };
 
-enum uring_cmd_verify_mode {
-	FIO_URING_CMD_VMODE_READ = 1,
-	FIO_URING_CMD_VMODE_COMPARE,
-};
-
 struct io_sq_ring {
 	unsigned *head;
 	unsigned *tail;
@@ -106,7 +101,6 @@ struct ioring_options {
 	unsigned int writefua;
 	unsigned int deac;
 	unsigned int write_mode;
-	unsigned int verify_mode;
 	struct cmdprio_options cmdprio_options;
 	unsigned int fixedbufs;
 	unsigned int registerfiles;
@@ -197,26 +191,6 @@ static struct fio_option options[] = {
 			  { .ival = "verify",
 			    .oval = FIO_URING_CMD_WMODE_VERIFY,
 			    .help = "Issue Verify commands for write operations"
-			  },
-		},
-		.category = FIO_OPT_C_ENGINE,
-		.group	= FIO_OPT_G_IOURING,
-	},
-	{
-		.name	= "verify_mode",
-		.lname	= "Do verify based on the configured command (e.g., Read or Compare command)",
-		.type	= FIO_OPT_STR,
-		.off1	= offsetof(struct ioring_options, verify_mode),
-		.help	= "Issue Read or Compare command in the verification phase",
-		.def	= "read",
-		.posval = {
-			  { .ival = "read",
-			    .oval = FIO_URING_CMD_VMODE_READ,
-			    .help = "Issue Read commands in the verification phase"
-			  },
-			  { .ival = "compare",
-			    .oval = FIO_URING_CMD_VMODE_COMPARE,
-			    .help = "Issue Compare commands in the verification phase"
 			  },
 		},
 		.category = FIO_OPT_C_ENGINE,
@@ -495,7 +469,6 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 	struct nvme_dsm *dsm;
 	void *ptr = ld->dsm;
 	unsigned int dsm_size;
-	uint8_t read_opcode = nvme_cmd_read;
 
 	/* only supports nvme_uring_cmd */
 	if (o->cmd_type != FIO_URING_CMD_NVME)
@@ -536,21 +509,9 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 	ptr += io_u->index * dsm_size;
 	dsm = (struct nvme_dsm *)ptr;
 
-	/*
-	 * If READ command belongs to the verification phase and the
-	 * verify_mode=compare, convert READ to COMPARE command.
-	 */
-	if (io_u->flags & IO_U_F_VER_LIST && io_u->ddir == DDIR_READ &&
-			o->verify_mode == FIO_URING_CMD_VMODE_COMPARE) {
-		populate_verify_io_u(td, io_u);
-		read_opcode = nvme_cmd_compare;
-		io_u_set(td, io_u, IO_U_F_VER_IN_DEV);
-	}
-
 	return fio_nvme_uring_cmd_prep(cmd, io_u,
 			o->nonvectored ? NULL : &ld->iovecs[io_u->index],
-			dsm, read_opcode, ld->write_opcode,
-			ld->cdw12_flags[io_u->ddir]);
+			dsm, ld->write_opcode, ld->cdw12_flags[io_u->ddir]);
 }
 
 static struct io_u *fio_ioring_event(struct thread_data *td, int event)
