@@ -862,6 +862,12 @@ static int fixup_options(struct thread_data *td)
 		    o->verify_interval)
 			o->verify_offset = 0;
 
+		if (o->ddir_seq_nr > 1 || o->ddir_seq_add) {
+			log_info("fio: verify cannot work with offset modifier"
+				 " to readwrite= \n");
+			ret |= 1;
+		}
+
 		if (td->o.verify_only)
 			o->verify_write_sequence = 0;
 	}
