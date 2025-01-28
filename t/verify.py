@@ -229,8 +229,8 @@ def verify_test(test_env, args, ddir, csum):
         # verify enabled. Use a previous test case for this by telling fio to
         # write to a file in a specific directory.
         if ddir in [ 'read', 'randread' ]:
-            directory = test_env['artifact_root'].replace(f'ddir_{ddir}', 'ddir_write') + \
-                f"/{test['test_id']:04d}"
+            directory = os.path.join(test_env['artifact_root'].replace(f'ddir_{ddir}','ddir_write'),
+                        f"{test['test_id']:04d}")
             test['fio_opts']['directory'] = str(Path(directory).absolute())
         else:
             if 'directory' in test['fio_opts']:
