@@ -854,6 +854,14 @@ static int fixup_options(struct thread_data *td)
 			o->verify_interval = gcd(o->min_bs[DDIR_WRITE],
 							o->max_bs[DDIR_WRITE]);
 
+		/*
+		 * Verify header should not be offset beyond the verify
+		 * interval.
+		 */
+		if (o->verify_offset + sizeof(struct verify_header) >
+		    o->verify_interval)
+			o->verify_offset = 0;
+
 		if (td->o.verify_only)
 			o->verify_write_sequence = 0;
 	}
