@@ -24,6 +24,7 @@ import time
 import locale
 import logging
 import argparse
+import platform
 import itertools
 import subprocess
 from pathlib import Path
@@ -326,6 +327,15 @@ def main():
               'artifact_root': artifact_root,
               'basename': 'verify',
               }
+
+    if platform.system() == 'Linux':
+        aio = 'libaio'
+    elif platform.system() == 'Windows':
+        aio = 'windowsaio'
+    else:
+        aio = 'posixaio'
+    for test in TEST_LIST:
+        test['fio_opts']['ioengine'] = aio
 
     total = { 'passed':  0, 'failed': 0, 'skipped': 0 }
 
