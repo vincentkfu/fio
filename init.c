@@ -854,6 +854,17 @@ static int fixup_options(struct thread_data *td)
 			o->verify_interval = gcd(o->min_bs[DDIR_WRITE],
 							o->max_bs[DDIR_WRITE]);
 
+		/*
+		 * Verify header should not be offset beyond the verify
+		 * interval.
+		 */
+		if (o->verify_offset + sizeof(struct verify_header) >
+		    o->verify_interval) {
+			log_err("fio: cannot offset verify header beyond the "
+				"verify interval.\n");
+			ret |= 1;
+		}
+
 		if (td->o.verify_only || (o->norandommap && o->iodepth > 1))
 			o->verify_write_sequence = 0;
 	}
