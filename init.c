@@ -854,7 +854,7 @@ static int fixup_options(struct thread_data *td)
 			o->verify_interval = gcd(o->min_bs[DDIR_WRITE],
 							o->max_bs[DDIR_WRITE]);
 
-		if (o->verify_only) {
+		if (o->verify_only || (o->norandommap && o->iodepth > 1)) {
 			o->verify_write_sequence = 0;
 			o->verify_header_seed = 0;
 		}
