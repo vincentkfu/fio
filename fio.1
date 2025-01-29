@@ -1368,11 +1368,13 @@ Normally fio will cover every block of the file when doing random I/O. If
 this option is given, fio will just get a new random offset without looking
 at past I/O history. This means that some blocks may not be read or written,
 and that some blocks may be read/written more than once. If this option is
-used with \fBverify\fR and multiple blocksizes (via \fBbsrange\fR),
-only intact blocks are verified, i.e., partially-overwritten blocks are
-ignored.  With an async I/O engine and an I/O depth > 1, it is possible for
-the same block to be overwritten, which can cause verification errors.  Either
-do not use norandommap in this case, or also use the lfsr random generator.
+used with \fBverify\fR then random seed value within the special header at the
+beginning of each block will not be verified. If this option is used with
+\fBverify\fR and multiple blocksizes (via \fBbsrange\fR), only intact blocks
+are verified, i.e., partially-overwritten blocks are ignored. With an async
+I/O engine and an I/O depth > 1, it is possible for the same block to be
+overwritten, which can cause verification errors.  Either do not use
+norandommap in this case, or also use the lfsr random generator.
 .TP
 .BI softrandommap \fR=\fPbool
 See \fBnorandommap\fR. If fio runs with the random block map enabled and
@@ -3553,8 +3555,9 @@ If writing to a file, fio can verify the file contents after each iteration
 of the job. Each verification method also implies verification of special
 header, which is written to the beginning of each block. This header also
 includes meta information, like offset of the block, block number, timestamp
-when block was written, etc. \fBverify\fR can be combined with
-\fBverify_pattern\fR option. The allowed values are:
+when block was written, random seed value used to generate the buffer
+contents, etc. \fBverify\fR can be combined with \fBverify_pattern\fR option.
+The allowed values are:
 .RS
 .RS
 .TP
