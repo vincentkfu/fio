@@ -29,7 +29,7 @@ import itertools
 import subprocess
 from pathlib import Path
 from fiotestlib import FioJobCmdTest, run_fio_tests
-from fiotestcommon import SUCCESS_NONZERO
+from fiotestcommon import SUCCESS_NONZERO, Requirements
 
 class VerifyTest(FioJobCmdTest):
     """
@@ -154,6 +154,9 @@ TEST_LIST = [
             "verify_async_cpus": "0-1",
             },
         "test_class": VerifyTest,
+        "requirements":     [Requirements.not_macos,
+                             Requirements.cpucount4],
+        # mac os does not support CPU affinity
     },
     {
         # tausworthe combine all verify options
@@ -176,6 +179,9 @@ TEST_LIST = [
             "verify_async_cpus": "0-1",
             },
         "test_class": VerifyTest,
+        "requirements":     [Requirements.not_macos,
+                             Requirements.cpucount4],
+        # mac os does not support CPU affinity
     },
     {
         # norandommap combine all verify options
@@ -198,6 +204,9 @@ TEST_LIST = [
             "verify_async_cpus": "0-1",
             },
         "test_class": VerifyTest,
+        "requirements":     [Requirements.not_macos,
+                             Requirements.cpucount4],
+        # mac os does not support CPU affinity
     },
     {
         # multiple jobs and files with verify
@@ -228,6 +237,7 @@ def parse_args():
     """Parse command-line arguments."""
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('-r', '--fio-root', help='fio root path')
     parser.add_argument('-d', '--debug', help='Enable debug messages', action='store_true')
     parser.add_argument('-f', '--fio', help='path to file executable (e.g., ./fio)')
     parser.add_argument('-a', '--artifact-root', help='artifact root directory')
@@ -236,6 +246,8 @@ def parse_args():
                         help='list of test(s) to skip')
     parser.add_argument('-o', '--run-only', nargs='+', type=int,
                         help='list of test(s) to run, skipping all others')
+    parser.add_argument('-k', '--skip-req', action='store_true',
+                        help='skip requirements checking')
     args = parser.parse_args()
 
     return args
@@ -320,6 +332,15 @@ def main():
     else:
         fio_path = os.path.join(os.path.dirname(__file__), '../fio')
     print(f"fio path is {fio_path}")
+
+    if args.fio_root:
+        fio_root = args.fio_root
+    else:
+        fio_root = str(Path(__file__).absolute().parent.parent)
+    print(f"fio root is {fio_root}")
+
+    if not args.skip_req:
+        Requirements(fio_root, args)
 
     test_env = {
               'fio_path': fio_path,
