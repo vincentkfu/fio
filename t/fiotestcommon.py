@@ -19,6 +19,11 @@ SUCCESS_DEFAULT = {
     'stderr_empty': True,
     'timeout': 600,
     }
+SUCCESS_LONG_STDERR = {
+    'zero_return': True,
+    'stderr_empty': False,
+    'timeout': 1800,
+    }
 SUCCESS_NONZERO = {
     'zero_return': False,
     'stderr_empty': False,
