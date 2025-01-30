@@ -270,7 +270,8 @@ def verify_test(test_env, args, ddir, csum):
         if ddir in [ 'read', 'randread' ]:
             directory = os.path.join(test_env['artifact_root'].replace(f'ddir_{ddir}','ddir_write'),
                         f"{test['test_id']:04d}")
-            test['fio_opts']['directory'] = str(Path(directory).absolute())
+            test['fio_opts']['directory'] = str(Path(directory).absolute()) if \
+                platform.system() != "Windows" else str(Path(directory).absolute()).replace(':', '\\:')
         else:
             if 'directory' in test['fio_opts']:
                 del test['fio_opts']['directory']
