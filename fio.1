@@ -665,7 +665,8 @@ Number of files to use for this job. Defaults to 1. The size of files
 will be \fBsize\fR divided by this unless explicit size is specified by
 \fBfilesize\fR. Files are created for each thread separately, and each
 file will have a file number within its name by default, as explained in
-\fBfilename\fR section.
+\fBfilename\fR section. If this option is used with \fBverify\fR then
+\fBverify_header_seed\fR will be disabled.
 .TP
 .BI openfiles \fR=\fPint
 Number of files to keep open at the same time. Defaults to the same as
