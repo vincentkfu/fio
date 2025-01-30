@@ -879,8 +879,9 @@ Target file/device
 	will be :option:`size` divided by this unless explicit size is specified by
 	:option:`filesize`. Files are created for each thread separately, and each
 	file will have a file number within its name by default, as explained in
-	:option:`filename` section.
-
+	:option:`filename` section. If this option is used with :option:`verify`
+	then the random seed value within the special header at the beginning of
+	each block will not be verified.
 
 .. option:: openfiles=int
 
