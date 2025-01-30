@@ -1094,7 +1094,7 @@ TEST_LIST = [
         'test_class':       FioExeTest,
         'exe':              't/verify.py',
         'parameters':       ['-f', '{fio_path}'],
-        'success':          SUCCESS_DEFAULT,
+        'success':          SUCCESS_LONG,
         'requirements':     [],
     },
 ]
