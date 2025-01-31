@@ -17,6 +17,8 @@ main() {
     )
     args=(
         --debug
+	-p
+	"1017:--run-only 1000 1001 1002 1003"
     )
     if [ "${GITHUB_JOB}" == "build-containers" ]; then
         # io_uring is disabled in containers
