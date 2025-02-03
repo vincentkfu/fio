@@ -19,17 +19,40 @@
 """
 import os
 import sys
-import json
 import time
-import locale
 import logging
 import argparse
 import platform
 import itertools
-import subprocess
 from pathlib import Path
 from fiotestlib import FioJobCmdTest, run_fio_tests
-from fiotestcommon import SUCCESS_NONZERO, Requirements
+from fiotestcommon import SUCCESS_DEFAULT, SUCCESS_NONZERO, Requirements
+
+
+VERIFY_OPT_LIST = [
+    'direct',
+    'iodepth',
+    'filesize',
+    'bs',
+    'time_based',
+    'runtime',
+    'io_size',
+    'offset',
+    'number_ios',
+    'output-format',
+    'directory',
+    'norandommap',
+    'numjobs',
+    'nrfiles',
+    'openfiles',
+    'cpus_allowed'
+    'verify_backlog',
+    'verify_backlog_batch',
+    'verify_interval',
+    'verify_offset',
+    'verify_async',
+    'verify_async_cpus',
+]
 
 class VerifyTest(FioJobCmdTest):
     """
@@ -46,40 +69,193 @@ class VerifyTest(FioJobCmdTest):
             f"--verify={self.fio_opts['verify']}",
             f"--output={self.filenames['output']}",
         ]
-        for opt in [
-                'direct',
-                'iodepth',
-                'filesize',
-                'bs',
-                'time_based',
-                'runtime',
-                'io_size',
-                'offset',
-                'number_ios',
-                'output-format',
-                'directory',
-                'norandommap',
-                'numjobs',
-                'nrfiles',
-                'openfiles',
-                'cpus_allowed'
-                'verify_backlog',
-                'verify_backlog_batch',
-                'verify_interval',
-                'verify_offset',
-                'verify_async',
-                'verify_async_cpus',
-            ]:
+        for opt in VERIFY_OPT_LIST:
             if opt in self.fio_opts:
                 option = f"--{opt}={self.fio_opts[opt]}"
                 fio_args.append(option)
 
         if self.fio_opts['verify'] == 'pattern':
-                fio_args.append('--verify_pattern="abcd"-120xdeadface')
+            fio_args.append('--verify_pattern="abcd"-120xdeadface')
 
         super().setup(fio_args)
 
 
+class VerifyFailureTest(FioJobCmdTest):
+    """
+    Verify test class. Run a standard verify job, modify the data, and then run
+    a verify-only job. Hopefully the last job will show a verification failure.
+    """
+
+    @staticmethod
+    def add_verify_opts(opt_list, adds):
+        """Add optional options."""
+
+        fio_opts = []
+
+        for opt in adds:
+            if opt in opt_list:
+                option = f"--{opt}={opt_list[opt]}"
+                fio_opts.append(option)
+
+        if 'verify' in opt_list and opt_list['verify'] == 'pattern':
+            fio_opts.append('--verify_pattern="abcd"-120xdeadface')
+
+        return fio_opts
+
+    def setup(self, parameters):
+        """Setup a test."""
+
+        fio_args_base = [
+            "--filename=verify",
+            "--stonewall",
+            f"--ioengine={self.fio_opts['ioengine']}",
+        ]
+
+        extra_options = VerifyFailureTest.add_verify_opts(self.fio_opts, VERIFY_OPT_LIST)
+
+        verify = [
+            "--verify_only",
+            f"--rw={self.fio_opts['rw']}",
+            f"--verify={self.fio_opts['verify']}",
+        ] + fio_args_base + extra_options
+
+
+        layout = [
+            "--name=layout",
+            f"--rw={self.fio_opts['rw']}",
+            f"--verify={self.fio_opts['verify']}",
+        ] + fio_args_base + extra_options
+
+        success = ["--name=success"] + verify
+
+        mangle = [
+            "--name=mangle",
+            "--rw=randwrite",
+            "--randrepeat=0",
+            f"--io_size={self.fio_opts['bs']}",
+        ] + fio_args_base + VerifyFailureTest.add_verify_opts(self.fio_opts, ['filesize'])
+
+        failure = ["--name=failure"] + verify
+
+        fio_args = layout + success + mangle + failure + [f"--output={self.filenames['output']}"]
+        logging.debug("fio_args: %s", fio_args)
+
+        super().setup(fio_args)
+
+    def check_result(self):
+        super().check_result()
+
+        checked = {}
+
+        for job in self.json_data['jobs']:
+            if job['jobname'] == 'layout':
+                if job['error']:
+                    self.passed = False
+                    self.failure_reason += " layout job failed"
+                checked['layout'] = True
+            elif job['jobname'] == 'success':
+                if job['error']:
+                    self.passed = False
+                    self.failure_reason += " first verify pass failed"
+                checked['success'] = True
+            elif job['jobname'] == 'mangle':
+                if job['error']:
+                    self.passed = False
+                    self.failure_reason += " mangle job failed"
+                checked['mangle'] = True
+            elif job['jobname'] == 'failure':
+                checked['failure'] = True
+                if self.fio_opts['verify'] == 'null':
+                    continue
+                if platform.system() == "Darwin":
+                    expected_errno = 92     # macOS EILSEQ
+                elif platform.system() == "Windows":
+                    expected_errno = 42     # Windows EILSEQ
+                else:
+                    expected_errno = 84     # Linux EILSEQ
+                logging.debug("Error set to %d", expected_errno)
+                if job['error'] != expected_errno:
+                    self.passed = False
+                    self.failure_reason += f" verify job produced {job['error']} instead of errno {expected_errno} Illegal byte sequence"
+                    print(self.json_data)
+                    with open(self.filenames['stderr'], "r") as se:
+                        contents = se.read()
+                        print(contents)
+            else:
+                self.passed = False
+                self.failure_reason += " unknown job name"
+
+        if len(checked) != 4:
+            self.passed = False
+            self.failure_reason += " four phases not completed"
+
+#
+# These tests have fixed data directions but can be run for different checksum
+# methods.
+#
+TEST_LIST_DDIR_FIXED = [
+    {
+        # basic verify job
+        "test_id": 1000,
+        "fio_opts": {
+            "ioengine": "psync",
+            "filesize": "1M",
+            "bs": 4096,
+            "rw": "write",
+            "output-format": "json",
+            },
+        "test_class": VerifyFailureTest,
+        "success": SUCCESS_NONZERO,
+    },
+    {
+        # basic test that just random writes data and then verifies it
+        "test_id": 1001,
+        "fio_opts": {
+            "ioengine": "psync",
+            "filesize": "1M",
+            "bs": 4096,
+            "rw": "randwrite",
+            "output-format": "json",
+            },
+        "test_class": VerifyFailureTest,
+        "success": SUCCESS_NONZERO,
+    },
+    {
+        # basic libaio seq write test
+        "test_id": 1002,
+        "fio_opts": {
+            "direct": 1,
+            "ioengine": "libaio",
+            "iodepth": 16,
+            "filesize": "1M",
+            "bs": 4096,
+            "rw": "write",
+            "output-format": "json",
+            },
+        "test_class": VerifyFailureTest,
+        "success": SUCCESS_NONZERO,
+    },
+    {
+        # basic libaio rand write test
+        "test_id": 1003,
+        "fio_opts": {
+            "direct": 1,
+            "ioengine": "libaio",
+            "iodepth": 16,
+            "filesize": "1M",
+            "bs": 4096,
+            "rw": "randwrite",
+            "output-format": "json",
+            },
+        "test_class": VerifyFailureTest,
+        "success": SUCCESS_NONZERO,
+    },
+]
+
+#
+# These tests are run for all combinations of data direction and checksum
+# methods.
+#
 TEST_LIST = [
     {
         # basic test
@@ -253,6 +429,24 @@ def parse_args():
     return args
 
 
+def verify_test_csum(test_env, args, csum):
+    """
+    Adjust test arguments based on values of csum. Then run the tests.
+    """
+    for test in TEST_LIST_DDIR_FIXED:
+        test['force_skip'] = False
+        test['fio_opts']['verify'] = csum
+
+        # These tests produce verification failures but not when verify=null,
+        # so adjust the success criterion.
+        if csum == 'null':
+            test['success'] = SUCCESS_DEFAULT
+        else:
+            test['success'] = SUCCESS_NONZERO
+
+    return run_fio_tests(TEST_LIST_DDIR_FIXED, test_env, args)
+
+
 def verify_test(test_env, args, ddir, csum):
     """
     Adjust test arguments based on values of ddir and csum.  Then run
@@ -277,6 +471,7 @@ def verify_test(test_env, args, ddir, csum):
                 del test['fio_opts']['directory']
 
     return run_fio_tests(TEST_LIST, test_env, args)
+
 
 # 100% read workloads below must follow write workloads so that the 100% read
 # workloads will be reading data written with verification enabled.
@@ -352,12 +547,23 @@ def main():
 
     if platform.system() == 'Linux':
         aio = 'libaio'
+        sync = 'psync'
     elif platform.system() == 'Windows':
         aio = 'windowsaio'
+        sync = 'sync'
     else:
         aio = 'posixaio'
+        sync = 'psync'
     for test in TEST_LIST:
-        test['fio_opts']['ioengine'] = aio
+        if 'aio' in test['fio_opts']['ioengine']:
+            test['fio_opts']['ioengine'] = aio
+        if 'sync' in test['fio_opts']['ioengine']:
+            test['fio_opts']['ioengine'] = sync
+    for test in TEST_LIST_DDIR_FIXED:
+        if 'aio' in test['fio_opts']['ioengine']:
+            test['fio_opts']['ioengine'] = aio
+        if 'sync' in test['fio_opts']['ioengine']:
+            test['fio_opts']['ioengine'] = sync
 
     total = { 'passed':  0, 'failed': 0, 'skipped': 0 }
 
@@ -375,6 +581,22 @@ def main():
             os.mkdir(test_env['artifact_root'])
 
             passed, failed, skipped = verify_test(test_env, args, ddir, csum)
+
+            total['passed'] += passed
+            total['failed'] += failed
+            total['skipped'] += skipped
+    except KeyboardInterrupt:
+        pass
+
+    try:
+        for csum in csum_list:
+            print(f"\nchecksum: {csum}")
+
+            test_env['artifact_root'] = os.path.join(artifact_root,
+                                                     f"csum_{csum}")
+            os.mkdir(test_env['artifact_root'])
+
+            passed, failed, skipped = verify_test_csum(test_env, args, csum)
 
             total['passed'] += passed
             total['failed'] += failed
