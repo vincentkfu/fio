@@ -854,8 +854,17 @@ static int fixup_options(struct thread_data *td)
 			o->verify_interval = gcd(o->min_bs[DDIR_WRITE],
 							o->max_bs[DDIR_WRITE]);
 
-		if (td->o.verify_only)
+		if (o->verify_only) {
 			o->verify_write_sequence = 0;
+			o->verify_header_seed = 0;
+		}
+
+		/*
+		 * Disable rand_seed check when we have verify_backlog, or
+		 * zone reset frequency for zonemode=zbd.
+		 */
+		if ((td->flags & TD_F_VER_BACKLOG) || o->zrf.u.f)
+			o->verify_header_seed = 0;
 	}
 
 	if (td->o.oatomic) {

@@ -3812,7 +3812,8 @@ Verification
 	invocation of this workload. This option allows one to check data multiple
 	times at a later date without overwriting it. This option makes sense only
 	for workloads that write data, and does not support workloads with the
-	:option:`time_based` option set.
+	:option:`time_based` option set. :option:`verify_write_sequence` and
+	:option:`verify_header_seed` will be disabled in this mode.
 
 .. option:: do_verify=bool
 
@@ -3825,8 +3826,9 @@ Verification
 	of the job. Each verification method also implies verification of special
 	header, which is written to the beginning of each block. This header also
 	includes meta information, like offset of the block, block number, timestamp
-	when block was written, etc.  :option:`verify` can be combined with
-	:option:`verify_pattern` option.  The allowed values are:
+	when block was written, initial seed value used to generate the buffer
+	contents etc. :option:`verify` can be combined with :option:`verify_pattern`
+	option.  The allowed values are:
 
 		**md5**
 			Use an md5 sum of the data area and store it in the header of
@@ -4023,6 +4025,15 @@ Verification
         verification is expected to succeed (while write sequence checking can still
         fail).
         Defaults to true.
+
+.. option:: verify_header_seed=bool
+
+	Verify the header seed value which was used to generate the buffer contents.
+	In certain scenarios with multiple files, when :option:`norandommap` is
+	enabled, or with offset modifiers (check :option:`readwrite` and
+	:option:`rw_sequencer`) verification of header seed may fail. Disabling
+	this option will mean that header seed checking is skipped.
+	Defaults to true.
 
 .. option:: trim_percentage=int
 

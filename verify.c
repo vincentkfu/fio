@@ -832,12 +832,22 @@ static int verify_header(struct io_u *io_u, struct thread_data *td,
 			hdr->len, hdr_len);
 		goto err;
 	}
-	if (hdr->rand_seed != io_u->rand_seed) {
-		log_err("verify: bad header rand_seed %"PRIu64
-			", wanted %"PRIu64,
-			hdr->rand_seed, io_u->rand_seed);
-		goto err;
-	}
+
+	/*
+	 * For read-only workloads, the program cannot be certain of the
+	 * initial seed used to generate the buffer contents. Checking of
+	 * seed will be done only for workloads that write data. For
+	 * verify_only or any mode de-selecting verify_header_seed, seed
+	 * check is skipped.
+	 */
+	if (td_write(td) && td->o.verify_header_seed)
+		if (hdr->rand_seed != io_u->rand_seed) {
+			log_err("verify: bad header rand_seed %"PRIu64
+				", wanted %"PRIu64,
+				hdr->rand_seed, io_u->rand_seed);
+			goto err;
+		}
+
 	if (hdr->offset != io_u->verify_offset + hdr_num * td->o.verify_interval) {
 		log_err("verify: bad header offset %"PRIu64
 			", wanted %llu",
@@ -932,14 +942,6 @@ int verify_io_u(struct thread_data *td, struct io_u **io_u_ptr)
 		if (td->o.verify_offset)
 			memswp(p, p + td->o.verify_offset, header_size);
 		hdr = p;
-
-		/*
-		 * Make rand_seed check pass when have verify_backlog or
-		 * zone reset frequency for zonemode=zbd.
-		 */
-		if (!td_rw(td) || (td->flags & TD_F_VER_BACKLOG) ||
-		    td->o.zrf.u.f)
-			io_u->rand_seed = hdr->rand_seed;
 
 		if (td->o.verify != VERIFY_PATTERN_NO_HDR) {
 			ret = verify_header(io_u, td, hdr, hdr_num, hdr_inc);

@@ -3542,7 +3542,8 @@ Do not perform specified workload, only verify data still matches previous
 invocation of this workload. This option allows one to check data multiple
 times at a later date without overwriting it. This option makes sense only
 for workloads that write data, and does not support workloads with the
-\fBtime_based\fR option set.
+\fBtime_based\fR option set. \fBverify_write_sequence\fR and
+\fBverify_header_seed\fR options will be disabled in this mode.
 .TP
 .BI do_verify \fR=\fPbool
 Run the verify phase after a write phase. Only valid if \fBverify\fR is
@@ -3553,8 +3554,9 @@ If writing to a file, fio can verify the file contents after each iteration
 of the job. Each verification method also implies verification of special
 header, which is written to the beginning of each block. This header also
 includes meta information, like offset of the block, block number, timestamp
-when block was written, etc. \fBverify\fR can be combined with
-\fBverify_pattern\fR option. The allowed values are:
+when block was written, initial seed value used to generate the buffer
+contents, etc. \fBverify\fR can be combined with \fBverify_pattern\fR option.
+The allowed values are:
 .RS
 .RS
 .TP
@@ -3749,6 +3751,14 @@ will mean that write sequence number checking is skipped. Doing that can be
 useful for testing atomic writes, as it means that checksum verification can
 still be attempted. For when \fBatomic\fR is enabled, checksum verification
 is expected to succeed (while write sequence checking can still fail).
+.TP
+.BI verify_header_seed \fR=\fPbool
+Verify the header seed value which was used to generate the buffer contents.
+In certain scenarios with multiple files, when \fBnorandommap\fR is enabled,
+or with offset modifiers (check \fBreadwrite\fR and \fBrw_sequencer\fR)
+verification of header seed may fail. Disabling this option will mean that
+header seed checking is skipped.
+Defaults to true.
 .TP
 .BI trim_percentage \fR=\fPint
 Number of verify blocks to discard/trim.
