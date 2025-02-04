@@ -105,6 +105,7 @@ class VerifyFailureTest(FioJobCmdTest):
     def setup(self, parameters):
         """Setup a test."""
 
+        logging.debug("ioengine is %s", self.fio_opts['ioengine'])
         fio_args_base = [
             "--filename=verify",
             "--stonewall",
@@ -177,10 +178,10 @@ class VerifyFailureTest(FioJobCmdTest):
                 if job['error'] != expected_errno:
                     self.passed = False
                     self.failure_reason += f" verify job produced {job['error']} instead of errno {expected_errno} Illegal byte sequence"
-                    print(self.json_data)
+                    logging.debug(self.json_data)
                     with open(self.filenames['stderr'], "r") as se:
                         contents = se.read()
-                        print(contents)
+                        logging.debug("stderr: %s", contents)
             else:
                 self.passed = False
                 self.failure_reason += " unknown job name"
