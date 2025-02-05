@@ -179,9 +179,6 @@ class VerifyFailureTest(FioJobCmdTest):
                     self.passed = False
                     self.failure_reason += f" verify job produced {job['error']} instead of errno {expected_errno} Illegal byte sequence"
                     logging.debug(self.json_data)
-                    with open(self.filenames['stderr'], "r") as se:
-                        contents = se.read()
-                        logging.debug("stderr: %s", contents)
             else:
                 self.passed = False
                 self.failure_reason += " unknown job name"
@@ -189,6 +186,11 @@ class VerifyFailureTest(FioJobCmdTest):
         if len(checked) != 4:
             self.passed = False
             self.failure_reason += " four phases not completed"
+
+        with open(self.filenames['stderr'], "r") as se:
+            contents = se.read()
+            logging.debug("stderr: %s", contents)
+
 
 #
 # These tests have fixed data directions but can be run for different checksum
