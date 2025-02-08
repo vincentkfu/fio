@@ -110,12 +110,16 @@ class VerifyFailureTest(FioJobCmdTest):
 
         extra_options = self.add_verify_opts(self.fio_opts, VERIFY_OPT_LIST)
 
-        verify = [
+        verify_only = [
             "--verify_only",
             f"--rw={self.fio_opts['rw']}",
             f"--verify={self.fio_opts['verify']}",
         ] + fio_args_base + extra_options
 
+        verify_read = [
+            "--rw=randread" if 'rand' in self.fio_opts['rw'] else "--rw=read",
+            f"--verify={self.fio_opts['verify']}",
+        ] + fio_args_base + extra_options
 
         layout = [
             "--name=layout",
@@ -123,7 +127,8 @@ class VerifyFailureTest(FioJobCmdTest):
             f"--verify={self.fio_opts['verify']}",
         ] + fio_args_base + extra_options
 
-        success = ["--name=success"] + verify
+        success_only = ["--name=success_only"] + verify_only
+        success_read = ["--name=success_read"] + verify_read
 
         mangle = [
             "--name=mangle",
@@ -133,9 +138,10 @@ class VerifyFailureTest(FioJobCmdTest):
             "--number_ios=1",
         ] + fio_args_base + self.add_verify_opts(self.fio_opts, ['filesize'])
 
-        failure = ["--name=failure"] + verify
+        failure_only = ["--name=failure_only"] + verify_only
+        failure_read = ["--name=failure_read"] + verify_read
 
-        fio_args = layout + success + mangle + failure + [f"--output={self.filenames['output']}"]
+        fio_args = layout + success_only + success_read + mangle + failure_only + failure_read + [f"--output={self.filenames['output']}"]
         logging.debug("fio_args: %s", fio_args)
 
         super().setup(fio_args)
@@ -147,35 +153,35 @@ class VerifyFailureTest(FioJobCmdTest):
 
         for job in self.json_data['jobs']:
             if job['jobname'] == 'layout':
+                checked[job['jobname']] = True
                 if job['error']:
                     self.passed = False
                     self.failure_reason += " layout job failed"
-                checked['layout'] = True
-            elif job['jobname'] == 'success':
+            elif 'success' in job['jobname']:
+                checked[job['jobname']] = True
                 if job['error']:
                     self.passed = False
-                    self.failure_reason += " first verify pass failed"
-                checked['success'] = True
+                    self.failure_reason += f" verify pass {job['jobname']} that should have succeeded actually failed"
             elif job['jobname'] == 'mangle':
+                checked[job['jobname']] = True
                 if job['error']:
                     self.passed = False
                     self.failure_reason += " mangle job failed"
-                checked['mangle'] = True
-            elif job['jobname'] == 'failure':
-                checked['failure'] = True
-                if self.fio_opts['verify'] == 'null':
+            elif 'failure' in job['jobname']:
+                checked[job['jobname']] = True
+                if self.fio_opts['verify'] == 'null' and not job['error']:
                     continue
                 if job['error'] != errno.EILSEQ:
                     self.passed = False
-                    self.failure_reason += f" verify job produced {job['error']} instead of errno {errno.EILSEQ} Illegal byte sequence"
+                    self.failure_reason += f" verify job {job['jobname']} produced {job['error']} instead of errno {errno.EILSEQ} Illegal byte sequence"
                     logging.debug(self.json_data)
             else:
                 self.passed = False
                 self.failure_reason += " unknown job name"
 
-        if len(checked) != 4:
+        if len(checked) != 6:
             self.passed = False
-            self.failure_reason += " four phases not completed"
+            self.failure_reason += " six phases not completed"
 
         with open(self.filenames['stderr'], "r") as se:
             contents = se.read()
