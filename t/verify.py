@@ -468,11 +468,16 @@ def verify_test(test_env, args, ddir, csum):
         else:
             test['fio_opts'].pop('verify_pattern', None)
 
-        # For 100% read data directions we need a file that was written with
+        # For 100% read data directions we need the write file that was written with
         # verify enabled. Use a previous test case for this by telling fio to
         # write to a file in a specific directory.
-        if ddir in [ 'read', 'randread' ]:
+        if ddir in [ 'read' ]:
             directory = os.path.join(test_env['artifact_root'].replace(f'ddir_{ddir}','ddir_write'),
+                        f"{test['test_id']:04d}")
+            test['fio_opts']['directory'] = str(Path(directory).absolute()) if \
+                platform.system() != "Windows" else str(Path(directory).absolute()).replace(':', '\\:')
+        elif ddir in [ 'randread' ]:
+            directory = os.path.join(test_env['artifact_root'].replace(f'ddir_{ddir}','ddir_randwrite'),
                         f"{test['test_id']:04d}")
             test['fio_opts']['directory'] = str(Path(directory).absolute()) if \
                 platform.system() != "Windows" else str(Path(directory).absolute()).replace(':', '\\:')
