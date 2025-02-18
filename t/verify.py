@@ -79,10 +79,10 @@ class VerifyTest(FioJobCmdTest):
         super().setup(fio_args)
 
 
-class VerifyFailureTest(FioJobCmdTest):
+class VerifyCSUMTest(FioJobCmdTest):
     """
-    Verify test class. Run a standard verify job, modify the data, and then run
-    a verify-only job. Hopefully the last job will show a verification failure.
+    Verify test class. Run standard verify jobs, modify the data, and then run
+    more verify jobs. Hopefully fio will detect that the data has chagned.
     """
 
     @staticmethod
@@ -189,10 +189,11 @@ class VerifyFailureTest(FioJobCmdTest):
 
 
 #
-# These tests have fixed data directions but can be run for different checksum
-# methods.
+# These tests are mainly intended to assess the checksum functions. The write
+# out data, run some verify jobs, then modify the data, and try to verify the
+# data again, expecting to see failures.
 #
-TEST_LIST_DDIR_FIXED = [
+TEST_LIST_CSUM = [
     {
         # basic seq write verify job
         "test_id": 1000,
@@ -203,7 +204,7 @@ TEST_LIST_DDIR_FIXED = [
             "rw": "write",
             "output-format": "json",
             },
-        "test_class": VerifyFailureTest,
+        "test_class": VerifyCSUMTest,
         "success": SUCCESS_NONZERO,
     },
     {
@@ -216,7 +217,7 @@ TEST_LIST_DDIR_FIXED = [
             "rw": "randwrite",
             "output-format": "json",
             },
-        "test_class": VerifyFailureTest,
+        "test_class": VerifyCSUMTest,
         "success": SUCCESS_NONZERO,
     },
     {
@@ -231,7 +232,7 @@ TEST_LIST_DDIR_FIXED = [
             "rw": "write",
             "output-format": "json",
             },
-        "test_class": VerifyFailureTest,
+        "test_class": VerifyCSUMTest,
         "success": SUCCESS_NONZERO,
     },
     {
@@ -246,7 +247,7 @@ TEST_LIST_DDIR_FIXED = [
             "rw": "randwrite",
             "output-format": "json",
             },
-        "test_class": VerifyFailureTest,
+        "test_class": VerifyCSUMTest,
         "success": SUCCESS_NONZERO,
     },
 ]
@@ -429,12 +430,13 @@ def parse_args():
 
     return args
 
+
 MANGLE_JOB_BS = 0
 def verify_test_csum(test_env, args, mbs, csum):
     """
     Adjust test arguments based on values of csum. Then run the tests.
     """
-    for test in TEST_LIST_DDIR_FIXED:
+    for test in TEST_LIST_CSUM:
         test['force_skip'] = False
         test['fio_opts']['verify'] = csum
 
@@ -455,7 +457,7 @@ def verify_test_csum(test_env, args, mbs, csum):
         else:
             test['success'] = SUCCESS_NONZERO
 
-    return run_fio_tests(TEST_LIST_DDIR_FIXED, test_env, args)
+    return run_fio_tests(TEST_LIST_CSUM, test_env, args)
 
 
 def verify_test(test_env, args, ddir, csum):
@@ -579,7 +581,7 @@ def main():
             test['fio_opts']['ioengine'] = aio
         if 'sync' in test['fio_opts']['ioengine']:
             test['fio_opts']['ioengine'] = sync
-    for test in TEST_LIST_DDIR_FIXED:
+    for test in TEST_LIST_CSUM:
         if 'aio' in test['fio_opts']['ioengine']:
             test['fio_opts']['ioengine'] = aio
         if 'sync' in test['fio_opts']['ioengine']:
