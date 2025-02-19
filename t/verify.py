@@ -46,7 +46,8 @@ VERIFY_OPT_LIST = [
     'numjobs',
     'nrfiles',
     'openfiles',
-    'cpus_allowed'
+    'cpus_allowed',
+    'experimental_verify',
     'verify_backlog',
     'verify_backlog_batch',
     'verify_interval',
@@ -54,6 +55,7 @@ VERIFY_OPT_LIST = [
     'verify_async',
     'verify_async_cpus',
     'verify_pattern',
+    'verify_only',
 ]
 
 class VerifyTest(FioJobCmdTest):
@@ -187,6 +189,121 @@ class VerifyCSUMTest(FioJobCmdTest):
             contents = se.read()
             logging.debug("stderr: %s", contents)
 
+
+#
+# This set of tests attempts to exercise fio's decisions about verifying the
+# sequence number and random seed in the verify header.
+#
+TEST_LIST_HEADER = [
+    {
+        # Basic test with options at default values
+        "test_id": 2000,
+        "fio_opts": {
+            "ioengine": "libaio",
+            "filesize": "1M",
+            "bs": 4096,
+            "output-format": "json",
+            },
+        "test_class": VerifyTest,
+        "success": SUCCESS_DEFAULT,
+    },
+    {
+        # Same as above but using experimental_verify
+        "test_id": 2001,
+        "fio_opts": {
+            "ioengine": "libaio",
+            "filesize": "1M",
+            "bs": 4096,
+            "experimental_verify": 1,
+            "output-format": "json",
+            },
+        "test_class": VerifyTest,
+        "success": SUCCESS_DEFAULT,
+    },
+    {
+        # Basic test with iodepth 16
+        "test_id": 2002,
+        "fio_opts": {
+            "ioengine": "libaio",
+            "filesize": "1M",
+            "bs": 4096,
+            "iodepth": 16,
+            "output-format": "json",
+            },
+        "test_class": VerifyTest,
+        "success": SUCCESS_DEFAULT,
+    },
+    {
+        # Same as above but using experimental_verify
+        "test_id": 2003,
+        "fio_opts": {
+            "ioengine": "libaio",
+            "filesize": "1M",
+            "bs": 4096,
+            "iodepth": 16,
+            "experimental_verify": 1,
+            "output-format": "json",
+            },
+        "test_class": VerifyTest,
+        "success": SUCCESS_DEFAULT,
+    },
+    {
+        # Basic test with 3 files
+        "test_id": 2004,
+        "fio_opts": {
+            "ioengine": "libaio",
+            "filesize": "1M",
+            "bs": 4096,
+            "nrfiles": 3,
+            "output-format": "json",
+            },
+        "test_class": VerifyTest,
+        "success": SUCCESS_DEFAULT,
+    },
+    {
+        # Same as above but using experimental_verify
+        "test_id": 2005,
+        "fio_opts": {
+            "ioengine": "libaio",
+            "filesize": "1M",
+            "bs": 4096,
+            "nrfiles": 3,
+            "experimental_verify": 1,
+            "output-format": "json",
+            },
+        "test_class": VerifyTest,
+        "success": SUCCESS_DEFAULT,
+    },
+    {
+        # Basic test with iodepth 16 and 3 files
+        "test_id": 2006,
+        "fio_opts": {
+            "ioengine": "libaio",
+            "filesize": "1M",
+            "bs": 4096,
+            "iodepth": 16,
+            "nrfiles": 3,
+            "output-format": "json",
+            },
+        "test_class": VerifyTest,
+        "success": SUCCESS_DEFAULT,
+    },
+    {
+        # Same as above but using experimental_verify
+        "test_id": 2007,
+        "fio_opts": {
+            "ioengine": "libaio",
+            "filesize": "1M",
+            "bs": 4096,
+            "iodepth": 16,
+            "nrfiles": 3,
+            "experimental_verify": 1,
+            "output-format": "json",
+            },
+        "test_class": VerifyTest,
+        "success": SUCCESS_DEFAULT,
+    },
+]
 
 #
 # These tests are mainly intended to assess the checksum functions. The write
@@ -431,10 +548,91 @@ def parse_args():
     return args
 
 
+def verify_test_header(test_env, args, csum, mode, sequence):
+    """
+    Adjust test arguments based on values of mode and sequence. Then run the
+    tests. This function is intended to run a set of tests that test
+    conditions under which the header random seed and sequence number are
+    checked.
+
+    The result should be a matrix with these combinations:
+        {write, write w/verify_only, read/write, read/write w/verify_only, read} x
+        {sequential, random w/randommap, random w/norandommap, sequence modifiers}
+    """
+    for test in TEST_LIST_HEADER:
+        # experimental_verify does not work in verify_only=1 mode
+        if "_vo" in mode and 'experimental_verify' in test['fio_opts'] and \
+        test['fio_opts']['experimental_verify']:
+            test['force_skip'] = True
+        else:
+            test['force_skip'] = False
+
+        test['fio_opts']['verify'] = csum
+        if csum == 'pattern':
+            test['fio_opts']['verify_pattern'] = '"abcd"-120xdeadface'
+        else:
+            test['fio_opts'].pop('verify_pattern', None)
+
+        if 'norandommap' in sequence:
+            test['fio_opts']['norandommap'] = 1
+        else:
+            test['fio_opts']['norandommap'] = 0
+
+        if 'randommap' in sequence:
+            prefix = "rand"
+        else:
+            prefix = ""
+
+        if 'sequence_modifier' in sequence:
+            suffix = ":4096"
+        else:
+            suffix = ""
+
+        if 'readwrite' in mode:
+            fio_ddir = 'rw'
+        elif 'write' in mode:
+            fio_ddir = 'write'
+        elif 'read' in mode:
+            fio_ddir = 'read'
+        else:
+            fio_ddir = ""
+            # TODO throw an exception here
+        test['fio_opts']['rw'] = prefix + fio_ddir + suffix
+        logging.debug("ddir is %s", test['fio_opts']['rw'])
+
+        if '_vo' in mode:
+            vo = 1
+        else:
+            vo = 0
+        test['fio_opts']['verify_only'] = vo
+
+        # For 100% read workloads we need to read a file that was written with
+        # verify enabled. Use a previous test case for this by pointing fio to
+        # write to a file in a specific directory.
+        # For verify_only tests we also need to point fio to a file that was
+        # written with verify enabled
+        if mode == 'read':
+            directory = os.path.join(test_env['artifact_root'].replace(f'mode_{mode}','mode_write'),
+                        f"{test['test_id']:04d}")
+            test['fio_opts']['directory'] = str(Path(directory).absolute()) if \
+                platform.system() != "Windows" else str(Path(directory).absolute()).replace(':', '\\:')
+        elif vo:
+            directory = os.path.join(test_env['artifact_root'].replace('write_vo','write'),
+                        f"{test['test_id']:04d}")
+            test['fio_opts']['directory'] = str(Path(directory).absolute()) if \
+                platform.system() != "Windows" else str(Path(directory).absolute()).replace(':', '\\:')
+        else:
+            test['fio_opts'].pop('directory', None)
+
+    return run_fio_tests(TEST_LIST_HEADER, test_env, args)
+
+
 MANGLE_JOB_BS = 0
 def verify_test_csum(test_env, args, mbs, csum):
     """
     Adjust test arguments based on values of csum. Then run the tests.
+    This function is designed for a series of tests that check that checksum
+    methods can reliably detect data integrity issues.
     """
     for test in TEST_LIST_CSUM:
         test['force_skip'] = False
@@ -586,6 +784,11 @@ def main():
             test['fio_opts']['ioengine'] = aio
         if 'sync' in test['fio_opts']['ioengine']:
             test['fio_opts']['ioengine'] = sync
+    for test in TEST_LIST_HEADER:
+        if 'aio' in test['fio_opts']['ioengine']:
+            test['fio_opts']['ioengine'] = aio
+        if 'sync' in test['fio_opts']['ioengine']:
+            test['fio_opts']['ioengine'] = sync
 
     total = { 'passed':  0, 'failed': 0, 'skipped': 0 }
 
@@ -628,6 +831,25 @@ def main():
             total['passed'] += passed
             total['failed'] += failed
             total['skipped'] += skipped
+
+        # The loop below tests combinations of options that exercise fio's
+        # decisions about disabling checks for the sequence number and random
+        # seed in the verify header.
+        mode_list = [ "write", "write_vo", "readwrite", "readwrite_vo", "read" ]
+        sequence_list = [ "sequential", "randommap", "norandommap", "sequence_modifier" ]
+        for mode, sequence in itertools.product(mode_list, sequence_list):
+            print(f"\nmode: {mode}, sequence: {sequence}")
+
+            test_env['artifact_root'] = os.path.join(artifact_root,
+                                                     f"mode_{mode}_seq_{sequence}")
+            os.mkdir(test_env['artifact_root'])
+
+            passed, failed, skipped = verify_test_header(test_env, args, 'md5', mode, sequence)
+
+            total['passed'] += passed
+            total['failed'] += failed
+            total['skipped'] += skipped
+
     except KeyboardInterrupt:
         pass
 
