@@ -13,7 +13,6 @@
 #
 # REQUIREMENTS
 # Python 3.6
-# - Linux (libaio ioengine)
 # - 4 CPUs (test_id 5,6,7)
 #
 """
@@ -191,8 +190,8 @@ class VerifyCSUMTest(FioJobCmdTest):
 
 
 #
-# This set of tests attempts to exercise fio's decisions about verifying the
-# sequence number and random seed in the verify header.
+# These tests exercise fio's decisions about verifying the sequence number and
+# random seed in the verify header.
 #
 TEST_LIST_HEADER = [
     {
@@ -306,7 +305,7 @@ TEST_LIST_HEADER = [
 ]
 
 #
-# These tests are mainly intended to assess the checksum functions. The write
+# These tests are mainly intended to assess the checksum functions. They write
 # out data, run some verify jobs, then modify the data, and try to verify the
 # data again, expecting to see failures.
 #
