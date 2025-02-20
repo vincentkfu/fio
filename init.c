@@ -860,6 +860,8 @@ static int fixup_options(struct thread_data *td)
 
 			if (!fio_option_is_set(o, verify_header_seed))
 				o->verify_header_seed = 0;
+
+			dprint(FD_VERIFY, "disabled numberio and seed checks due to verify_only\n");
 		}
 
 		if (o->norandommap && !td_ioengine_flagged(td, FIO_SYNCIO) &&
@@ -871,6 +873,7 @@ static int fixup_options(struct thread_data *td)
 			 */
 			if (!fio_option_is_set(o, verify_write_sequence))
 				o->verify_write_sequence = 0;
+			dprint(FD_VERIFY, "disabled numberio check due to qd > 1 async IO\n");
 		}
 
 		/*
@@ -894,6 +897,23 @@ static int fixup_options(struct thread_data *td)
 		    o->zrf.u.f || !fio_use_hist_list(td)) {
 			if (!fio_option_is_set(o, verify_header_seed))
 				o->verify_header_seed = 0;
+
+			dprint(FD_VERIFY, "disabled rand seed check due to multiple reasons\n");
+		}
+
+		/*
+		 * With experimental verify we need to disable header seed and
+		 * sequence number checks if there is a possibility of
+		 * overwriting previous written blocks.
+		 */
+		if (o->experimental_verify && !fio_use_hist_list(td)) {
+			if (!fio_option_is_set(o, verify_write_sequence))
+				o->verify_write_sequence = 0;
+
+			if (!fio_option_is_set(o, verify_header_seed))
+				o->verify_header_seed = 0;
+
+			dprint(FD_VERIFY, "disabled numberio and rand seed checks due to exp verify and possible overlap\n");
 		}
 	}
 
