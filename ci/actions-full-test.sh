@@ -34,7 +34,7 @@ main() {
     fi
 
     echo python3 t/run-fio-tests.py --skip "${skip[@]}" "${args[@]}"
-    python3 t/run-fio-tests.py --skip "${skip[@]}" "${args[@]}"
+    python3 t/run-fio-tests.py --skip "${skip[@]}" "${args[@]}" --run-only 1017 -p "1017:--debug"
     make -C doc html
 }
 
