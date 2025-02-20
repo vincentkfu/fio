@@ -76,6 +76,7 @@ class VerifyTest(FioJobCmdTest):
             if opt in self.fio_opts:
                 option = f"--{opt}={self.fio_opts[opt]}"
                 fio_args.append(option)
+        logging.debug("fio_args: %s", fio_args)
 
         super().setup(fio_args)
 
@@ -102,7 +103,6 @@ class VerifyCSUMTest(FioJobCmdTest):
     def setup(self, parameters):
         """Setup a test."""
 
-        logging.debug("ioengine is %s", self.fio_opts['ioengine'])
         fio_args_base = [
             "--filename=verify",
             "--stonewall",
