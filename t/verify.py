@@ -375,33 +375,8 @@ TEST_LIST_CSUM = [
 #
 TEST_LIST = [
     {
-        # basic test
-        "test_id": 1,
-        "fio_opts": {
-            "direct": 1,
-            "ioengine": "libaio",
-            "iodepth": 32,
-            "filesize": "2M",
-            "bs": 512,
-            },
-        "test_class": VerifyTest,
-    },
-    {
-        # norandommap
-        "test_id": 2,
-        "fio_opts": {
-            "direct": 1,
-            "ioengine": "libaio",
-            "iodepth": 32,
-            "filesize": "2M",
-            "norandommap": 1,
-            "bs": 512,
-            },
-        "test_class": VerifyTest,
-    },
-    {
         # norandommap with verify backlog
-        "test_id": 3,
+        "test_id": 1,
         "fio_opts": {
             "direct": 1,
             "ioengine": "libaio",
@@ -418,7 +393,7 @@ TEST_LIST = [
     },
     {
         # norandommap with verify offset and interval
-        "test_id": 4,
+        "test_id": 2,
         "fio_opts": {
             "direct": 1,
             "ioengine": "libaio",
@@ -434,7 +409,7 @@ TEST_LIST = [
     },
     {
         # norandommap with verify offload to async threads
-        "test_id": 5,
+        "test_id": 3,
         "fio_opts": {
             "direct": 1,
             "ioengine": "libaio",
@@ -453,7 +428,7 @@ TEST_LIST = [
     },
     {
         # tausworthe combine all verify options
-        "test_id": 6,
+        "test_id": 4,
         "fio_opts": {
             "direct": 1,
             "ioengine": "libaio",
@@ -478,7 +453,7 @@ TEST_LIST = [
     },
     {
         # norandommap combine all verify options
-        "test_id": 7,
+        "test_id": 5,
         "fio_opts": {
             "direct": 1,
             "ioengine": "libaio",
@@ -503,7 +478,7 @@ TEST_LIST = [
     },
     {
         # multiple jobs and files with verify
-        "test_id": 8,
+        "test_id": 6,
         "fio_opts": {
             "direct": 1,
             "ioengine": "libaio",
