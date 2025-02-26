@@ -5,7 +5,7 @@ on:
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: "35 0 * * *"  # 0:35 UTC which is 19:35 ET
+    - cron: "50 * * * *"  # hourly at 50 minutes after the hour for testing
 
 jobs:
   build-containers:
