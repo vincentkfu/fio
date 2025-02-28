@@ -46,6 +46,7 @@ VERIFY_OPT_LIST = [
     'nrfiles',
     'openfiles',
     'cpus_allowed',
+    'fallocate',
     'experimental_verify',
     'verify_backlog',
     'verify_backlog_batch',
@@ -67,6 +68,7 @@ class VerifyTest(FioJobCmdTest):
 
         fio_args = [
             "--name=verify",
+            "--fallocate=truncate",
             f"--ioengine={self.fio_opts['ioengine']}",
             f"--rw={self.fio_opts['rw']}",
             f"--verify={self.fio_opts['verify']}",
@@ -104,6 +106,7 @@ class VerifyCSUMTest(FioJobCmdTest):
 
         logging.debug("ioengine is %s", self.fio_opts['ioengine'])
         fio_args_base = [
+            "--fallocate=truncate",
             "--filename=verify",
             "--stonewall",
             f"--ioengine={self.fio_opts['ioengine']}",
@@ -530,29 +533,16 @@ def verify_test_header(test_env, args, csum, mode, sequence):
         #
         # For verify_only tests we also need to point fio to a file that was
         # written with verify enabled
-        #
-        # Finally, we have observed on Windows platforms that fio may not
-        # create files of the size specified by filesize. This causes false
-        # positive test failures when we later try to run 100% read verify jobs
-        # on the files as the verify job may lay out a file of the size
-        # specified by filesize and overwrite the previously written file,
-        # inducing verificaiton failures. Until this issue is resolved, just
-        # skip these tests on Windows.
-        # https://github.com/axboe/fio/issues/1872
         if mode == 'read':
             directory = os.path.join(test_env['artifact_root'].replace(f'mode_{mode}','mode_write'),
                         f"{test['test_id']:04d}")
             test['fio_opts']['directory'] = str(Path(directory).absolute()) if \
                 platform.system() != "Windows" else str(Path(directory).absolute()).replace(':', '\\:')
-            if platform.system() == "Windows":
-                test['force_skip'] = True
         elif vo:
             directory = os.path.join(test_env['artifact_root'].replace('write_vo','write'),
                         f"{test['test_id']:04d}")
             test['fio_opts']['directory'] = str(Path(directory).absolute()) if \
                 platform.system() != "Windows" else str(Path(directory).absolute()).replace(':', '\\:')
-            if platform.system() == "Windows":
-                test['force_skip'] = True
         else:
             test['fio_opts'].pop('directory', None)
 
@@ -621,11 +611,6 @@ def verify_test(test_env, args, ddir, csum):
                 platform.system() != "Windows" else str(Path(directory).absolute()).replace(':', '\\:')
         else:
             test['fio_opts'].pop('directory', None)
-
-        # On Windows we are skipping the tests below because of the filesize
-        # issue noted above.
-        if ddir in [ 'read', 'randread' ] and platform.system() == 'Windows':
-            test['force_skip'] = True
 
     return run_fio_tests(TEST_LIST, test_env, args)
 
