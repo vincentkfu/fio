@@ -81,6 +81,21 @@ class VerifyTest(FioJobCmdTest):
 
         super().setup(fio_args)
 
+    def check_result(self):
+        super().check_result()
+
+        if not self.passed:
+            with open(self.filenames['stderr'], "r") as se:
+                contents = se.read()
+                logging.info("stderr: %s", contents)
+
+            with open(self.filenames['stdout'], "r") as so:
+                contents = so.read()
+                logging.info("stdout: %s", contents)
+
+            with open(self.filenames['output'], "r") as out:
+                contents = out.read()
+                logging.info("output: %s", contents)
 
 class VerifyCSUMTest(FioJobCmdTest):
     """
