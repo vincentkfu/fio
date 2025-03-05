@@ -435,8 +435,6 @@ TEST_LIST = [
             "numjobs": 2,
             "norandommap": 1,
             "bs": 4096,
-            "time_based": 1,
-            "runtime": 40,
             "verify_interval": 2048,
             "verify_offset": 1024,
             "verify_backlog": 16,
