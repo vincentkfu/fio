@@ -2679,6 +2679,10 @@ Use Verify commands for write operations
 .RE
 .RE
 .TP
+.BI (io_uring_cmd)deac \fR=\fPbool
+Set the DEAC (deallocate) bit when sending NVMe write zeroes commands. Default
+is 0.
+.TP
 .BI (io_uring_cmd)verify_mode \fR=\fPstr
 Specifies the type of command to be used in the verification phase. Defaults to 'read'.
 .RS

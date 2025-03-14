@@ -2892,6 +2892,10 @@ with the caveat that when used on the command line, they must come after the
                 **verify**
                         Use Verify commands for write operations
 
+.. option:: deac=bool : [io_uring_cmd]
+
+        Set the DEAC (deallocate) bit when sending NVMe write zeroes commands.
+
 .. option:: verify_mode=str : [io_uring_cmd]
 
         Specifies the type of command to be used in the verification phase.  Defaults to 'read'.
