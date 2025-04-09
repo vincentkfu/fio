@@ -1,0 +1,20 @@
+#
+# !!! WARNING: THIS IS A DESTRUCTIVE TEST !!!
+#
+# Use NVMe compare commands for verify instead of fio's checksums
+#
+# This feature requires:
+#  verify_pattern={something}
+#  verify=pattern
+#
+# verify=pattern is needed to prevent fio from including a verify header
+#
+
+[test]
+ioengine=io_uring_cmd
+verify_mode=compare
+verify_pattern=1
+rw=write
+size=1M
+verify=pattern
+filename=/dev/ng0n1	### WILL DESTROY DATA ON THIS DEVICE ###
