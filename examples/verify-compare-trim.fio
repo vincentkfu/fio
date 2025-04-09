@@ -1,0 +1,20 @@
+#
+# !!! WARNING: THIS IS A DESTRUCTIVE TEST !!!
+#
+# Use NVMe compare commands for verify instead of fio's checksums
+# Also trim the data blocks and use NVMe compare commands to verify
+# that trimmed LBAs are zeroed out.
+#
+#
+
+[test]
+ioengine=io_uring_cmd
+verify_mode=compare
+verify_pattern=1
+rw=write
+size=1M
+verify=pattern
+filename=/dev/ng0n1	### WILL DESTROY DATA ON THIS DEVICE ###
+trim_verify_zero=1
+trim_percentage=100
+trim_backlog=1
