@@ -102,7 +102,21 @@ static void fill_pattern_headers(struct thread_data *td, struct io_u *io_u,
 	struct verify_header *hdr;
 	void *p = io_u->buf;
 
-	fill_verify_pattern(td, p, io_u->buflen, io_u, seed, use_seed);
+	if (io_u->flags & IO_U_F_TRIMMED) {
+		/* There are two cases where we need to fill a verify data
+		 * buffer:
+		 *  1. when we originally write out the data
+		 *  2. when we are using device capabilities for verification
+		 *     with verify_mode=compare
+		 *
+		 * In case 2 if we are running a verify/trim workload and we
+		 * trimmed the LBA in question we need to zero out the buffer
+		 * instead of filling it with the data that we originally wrote
+		 */
+		memset(io_u->buf, 0, io_u->buflen);
+	} else {
+		fill_verify_pattern(td, p, io_u->buflen, io_u, seed, use_seed);
+	}
 
 	hdr_inc = get_hdr_inc(td, io_u);
 	header_num = 0;
