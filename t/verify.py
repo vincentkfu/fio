@@ -514,7 +514,7 @@ def verify_test_header(test_env, args, csum, mode, sequence):
             test['force_skip'] = False
 
         test['fio_opts']['verify'] = csum
-        if csum == 'pattern':
+        if csum in ('pattern', 'pattern_hdr'):
             test['fio_opts']['verify_pattern'] = '"abcd"-120xdeadface'
         else:
             test['fio_opts'].pop('verify_pattern', None)
@@ -585,7 +585,7 @@ def verify_test_csum(test_env, args, mbs, csum):
         test['force_skip'] = False
         test['fio_opts']['verify'] = csum
 
-        if csum == 'pattern':
+        if csum in ('pattern', 'pattern_hdr'):
             test['fio_opts']['verify_pattern'] = '"abcd"-120xdeadface'
         elif csum == 'running_pattern':
             test['fio_opts']['verify'] = "pattern_hdr"
@@ -628,7 +628,7 @@ def verify_test(test_env, args, ddir, csum):
         test['fio_opts']['rw'] = ddir
         test['fio_opts']['verify'] = csum
 
-        if csum == 'pattern':
+        if csum in ('pattern', 'pattern_hdr'):
             test['fio_opts']['verify_pattern'] = '"abcd"-120xdeadface'
         else:
             test['fio_opts'].pop('verify_pattern', None)
@@ -682,6 +682,7 @@ CSUM_LIST2 = [
         'sha3-384',
         'sha3-512',
         'pattern',
+        'pattern_hdr',
         'running_pattern',
         'running_pattern_nohdr',
         'null',
