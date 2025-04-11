@@ -3960,6 +3960,14 @@ Verification
 
 		verify_pattern=0xff%o"abcd"-12
 
+.. option:: verify_pattern_running=bool
+
+        Recreate an instance of the :option:`verify_pattern` every
+        :option:`verify_interval` bytes. This is only useful when
+        :option:`verify_pattern` contains the %o format specifier and can be
+        used to speed up the process of writing each block on a device with its
+        offset. Default: false.
+
 .. option:: verify_fatal=bool
 
 	Normally fio will keep checking the entire contents before quitting on a
