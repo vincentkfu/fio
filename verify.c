@@ -101,6 +101,7 @@ static void fill_pattern_headers(struct thread_data *td, struct io_u *io_u,
 	unsigned int hdr_inc, header_num;
 	struct verify_header *hdr;
 	void *p = io_u->buf;
+	unsigned long long offset = io_u->offset;
 
 	if (io_u->flags & IO_U_F_TRIMMED) {
 		/* There are two cases where we need to fill a verify data
@@ -115,16 +116,23 @@ static void fill_pattern_headers(struct thread_data *td, struct io_u *io_u,
 		 */
 		memset(io_u->buf, 0, io_u->buflen);
 	} else {
-		fill_verify_pattern(td, p, io_u->buflen, io_u, seed, use_seed);
+		if (!td->o.verify_pattern_running)
+			fill_verify_pattern(td, p, io_u->buflen, io_u, seed, use_seed);
 	}
 
 	hdr_inc = get_hdr_inc(td, io_u);
 	header_num = 0;
-	for (; p < io_u->buf + io_u->buflen; p += hdr_inc) {
+	for (; p < io_u->buf + io_u->buflen; p += hdr_inc, io_u->offset += hdr_inc) {
 		hdr = p;
+		if (td->o.verify_pattern_running) {
+			fill_verify_pattern(td, p, hdr_inc, io_u, seed, use_seed);
+			dprint(FD_VERIFY, "p=%p, hdr_inc=%u, io_u->offset=%llu\n", p, hdr_inc, io_u->offset);
+		}
 		populate_hdr(td, io_u, hdr, header_num, hdr_inc);
 		header_num++;
 	}
+
+	io_u->offset = offset;
 }
 
 static void memswp(void *buf1, void *buf2, unsigned int len)
@@ -394,13 +402,17 @@ static int verify_io_u_pattern(struct verify_header *hdr, struct vcont *vc)
 	unsigned int header_size = __hdr_size(td->o.verify);
 	unsigned int len, mod, i, pattern_size;
 	int rc;
+	unsigned long long offset = io_u->offset;
 
 	pattern = td->o.verify_pattern;
 	pattern_size = td->o.verify_pattern_bytes;
 	assert(pattern_size != 0);
 
+	if (td->o.verify_pattern_running)
+		io_u->offset += vc->hdr_num * get_hdr_inc(td, io_u);
 	(void)paste_format_inplace(pattern, pattern_size,
 				   td->o.verify_fmt, td->o.verify_fmt_sz, io_u);
+	io_u->offset = offset;
 
 	buf = (char *) hdr + header_size;
 	len = get_hdr_inc(td, io_u) - header_size;
@@ -1541,6 +1553,8 @@ int paste_blockoff(char *buf, unsigned int len, void *priv)
 {
 	struct io_u *io = priv;
 	unsigned long long off;
+
+	dprint(FD_VERIFY, "paste_blockoff: len = %u\n", len);
 
 	typecheck(__typeof__(off), io->offset);
 	off = cpu_to_le64((uint64_t)io->offset);

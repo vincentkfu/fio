@@ -3288,6 +3288,18 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_VERIFY,
 	},
 	{
+		.name	= "verify_pattern_running",
+		.lname	= "Running verify pattern",
+		.type	= FIO_OPT_BOOL,
+		.off1	= offsetof(struct thread_options, verify_pattern_running),
+		.def	= "0",
+		.help	= "Re-create verify for every verify interval",
+		.parent = "verify",
+		.hide	= 1,
+		.category = FIO_OPT_C_IO,
+		.group	= FIO_OPT_G_VERIFY,
+	},
+	{
 		.name	= "verify_fatal",
 		.lname	= "Verify fatal",
 		.type	= FIO_OPT_BOOL,

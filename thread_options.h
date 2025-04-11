@@ -146,6 +146,7 @@ struct thread_options {
 	unsigned int verify_offset;
 	char *verify_pattern;
 	unsigned int verify_pattern_bytes;
+	unsigned int verify_pattern_running;
 	struct pattern_fmt verify_fmt[8];
 	unsigned int verify_fmt_sz;
 	unsigned int verify_fatal;
