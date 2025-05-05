@@ -892,7 +892,7 @@ def main():
             print(f"\npattern: {pattern}, verify_pattern_interval: {vpi}, verify_interval: {vi}")
 
             test_env['artifact_root'] = os.path.join(artifact_root,
-                                                     f"pattern_{pattern}_vpi_{vpi}_vi_{vi}")
+                f"pattern_{pattern}_vpi_{vpi}_vi_{vi}").replace('"', '').replace("%", 'pct')
             os.mkdir(test_env['artifact_root'])
 
             passed, failed, skipped = verify_test_vpi(test_env, args, pattern, vpi, vi)
