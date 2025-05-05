@@ -86,7 +86,7 @@ void fill_verify_pattern(struct thread_data *td, void *p, unsigned int len,
 		if (!bytes_todo)
 			bytes_todo = interval;
 		bytes_todo = min(bytes_todo, len - bytes_done);
-		dprint(FD_VERIFY, "offset = %llu, bytes_todo = %u, bytes_done = %u\n", io_u->offset, bytes_todo, bytes_done);
+		dprint(FD_VERIFY, "offset = %llu, bytes_todo = %u, bytes_done = %u, p = %p\n", io_u->offset, bytes_todo, bytes_done, p);
 
 		(void)paste_format(td->o.verify_pattern, td->o.verify_pattern_bytes,
 				   td->o.verify_fmt, td->o.verify_fmt_sz,
@@ -119,6 +119,7 @@ static void fill_pattern_headers(struct thread_data *td, struct io_u *io_u,
 	unsigned int hdr_inc, header_num;
 	struct verify_header *hdr;
 	void *p = io_u->buf;
+	unsigned long long offset = io_u->offset;
 
 	if (io_u->flags & IO_U_F_TRIMMED) {
 		/* There are two cases where we need to fill a verify data
@@ -136,6 +137,8 @@ static void fill_pattern_headers(struct thread_data *td, struct io_u *io_u,
 	} else {
 		fill_verify_pattern(td, p, io_u->buflen, io_u, seed, use_seed);
 	}
+	dprint(FD_VERIFY, "offset = %llu, io_u->offset = %llu\n", offset, io_u->offset);
+	assert(offset == io_u->offset);
 
 	hdr_inc = get_hdr_inc(td, io_u);
 	header_num = 0;
@@ -953,7 +956,7 @@ static int verify_header(struct io_u *io_u, struct thread_data *td,
 	if (hdr->offset != io_u->verify_offset + hdr_num * td->o.verify_interval) {
 		log_err("verify: bad header offset %"PRIu64
 			", wanted %llu",
-			hdr->offset, io_u->verify_offset);
+			hdr->offset, io_u->verify_offset + hdr_num * td->o.verify_interval);
 		goto err;
 	}
 
@@ -1286,6 +1289,8 @@ static void __fill_hdr(struct thread_data *td, struct io_u *io_u,
 	hdr->thread = td->thread_number;
 	hdr->numberio = io_u->numberio;
 	hdr->crc32 = fio_crc32c(p, offsetof(struct verify_header, crc32));
+
+	dprint(FD_VERIFY, "io_u->verify_offset = %llu, hdr->offset = %llu\n", io_u->verify_offset, hdr->offset);
 }
 
 

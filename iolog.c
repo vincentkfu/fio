@@ -293,6 +293,8 @@ void log_io_piece(struct thread_data *td, struct io_u *io_u)
 	ipo->numberio = io_u->numberio;
 	ipo->flags = IP_F_IN_FLIGHT;
 
+	dprint(FD_VERIFY, "ipo->offset = %llu\n", ipo->offset);
+
 	io_u->ipo = ipo;
 
 	if (io_u_should_trim(td, io_u)) {

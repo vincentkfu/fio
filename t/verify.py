@@ -74,7 +74,7 @@ class VerifyTest(FioJobCmdTest):
             f"--ioengine={self.fio_opts['ioengine']}",
             f"--rw={self.fio_opts['rw']}",
             f"--verify={self.fio_opts['verify']}",
-            f"--output={self.filenames['output']}",
+            f"--output={os.path.basename(self.filenames['output'])}",
         ]
         for opt in VERIFY_OPT_LIST:
             if opt in self.fio_opts:
@@ -885,7 +885,7 @@ def main():
             total['skipped'] += skipped
 
         # The loop below is for verify_pattern_interval tests
-        pattern_list = ['%o', '"abcde"', '1%o',]
+        pattern_list = ['"%o"', '"abcde"', '"1%o"',]
         vpi_list = [10, 129, 512, None]
         verify_interval_list = [512, 1024, 2222, 3791, None]
         for pattern, vpi, vi in itertools.product(pattern_list, vpi_list, verify_interval_list):

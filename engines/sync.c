@@ -204,6 +204,8 @@ static enum fio_q_status fio_psyncio_queue(struct thread_data *td,
 
 	fio_ro_check(td, io_u);
 
+	dprint(FD_IO, "io_u->offset = %llu, io_u->buf = %p\n", io_u->offset, io_u->buf);
+
 	if (io_u->ddir == DDIR_READ)
 		ret = pread(f->fd, io_u->xfer_buf, io_u->xfer_buflen, io_u->offset);
 	else if (io_u->ddir == DDIR_WRITE)
