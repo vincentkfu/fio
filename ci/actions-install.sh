@@ -168,6 +168,7 @@ install_alma() {
     dnf install -y 'dnf-command(config-manager)'
     dnf config-manager --set-enabled crb
     dnf install -y almalinux-release-devel
+    /usr/bin/crb enable
     install_rhel_clone
 }
 
