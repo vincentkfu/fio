@@ -56,6 +56,33 @@ static inline void arch_init_amd(void)
 	tsc_reliable = (edx & (1U << 8)) != 0;
 }
 
+static inline void arch_init_zhaoxin(void)
+{
+	unsigned int eax, ebx, ecx = 0, edx;
+
+	/*
+	 * Check for TSC
+	 */
+	eax = 1;
+	do_cpuid(&eax, &ebx, &ecx, &edx);
+	if (!(edx & (1U << 4)))
+		return;
+
+	/*
+	 * Check for constant rate and synced (across cores) TSC
+	 */
+	eax = 0x80000007;
+	do_cpuid(&eax, &ebx, &ecx, &edx);
+	tsc_reliable = (edx & (1U << 8)) != 0;
+
+	/*
+	 * Check for FDRAND
+	 */
+	eax = 0x1;
+	do_cpuid(&eax, &ebx, &ecx, &edx);
+	arch_random = (ecx & (1U << 30)) != 0;
+}
+
 static inline void arch_init(char *envp[])
 {
 	unsigned int level;
@@ -72,6 +99,8 @@ static inline void arch_init(char *envp[])
 		arch_init_intel();
 	else if (!strcmp(str, "AuthenticAMD") || !strcmp(str, "HygonGenuine"))
 		arch_init_amd();
+	else if (!strcmp(str, "  Shanghai  ") || !strcmp(str, "CentaurHauls"))
+		arch_init_zhaoxin();
 }
 
 #endif
