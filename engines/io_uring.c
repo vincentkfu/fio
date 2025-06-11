@@ -30,6 +30,71 @@
 
 #include <sys/stat.h>
 
+#ifndef IO_INTEGRITY_CHK_GUARD
+/* flags for integrity meta */
+#define IO_INTEGRITY_CHK_GUARD		(1U << 0) /* enforce guard check */
+#define IO_INTEGRITY_CHK_REFTAG		(1U << 1) /* enforce ref check */
+#define IO_INTEGRITY_CHK_APPTAG		(1U << 2) /* enforce app check */
+#endif /* IO_INTEGRITY_CHK_GUARD */
+
+#ifndef FS_IOC_GETLBMD_CAP
+/* Protection info capability flags */
+#define	LBMD_PI_CAP_INTEGRITY		(1 << 0)
+#define	LBMD_PI_CAP_REFTAG		(1 << 1)
+
+/* Checksum types for Protection Information */
+#define LBMD_PI_CSUM_NONE		0
+#define LBMD_PI_CSUM_IP			1
+#define LBMD_PI_CSUM_CRC16_T10DIF	2
+#define LBMD_PI_CSUM_CRC64_NVME		4
+
+/*
+ * Logical block metadata capability descriptor
+ * If the device does not support metadata, all the fields will be zero.
+ * Applications must check lbmd_flags to determine whether metadata is
+ * supported or not.
+ */
+struct logical_block_metadata_cap {
+	/* Bitmask of logical block metadata capability flags */
+	__u32	lbmd_flags;
+	/*
+	 * The amount of data described by each unit of logical block
+	 * metadata
+	 */
+	__u16	lbmd_interval;
+	/*
+	 * Size in bytes of the logical block metadata associated with each
+	 * interval
+	 */
+	__u8	lbmd_size;
+	/*
+	 * Size in bytes of the opaque block tag associated with each
+	 * interval
+	 */
+	__u8	lbmd_opaque_size;
+	/*
+	 * Offset in bytes of the opaque block tag within the logical block
+	 * metadata
+	 */
+	__u8	lbmd_opaque_offset;
+	/* Size in bytes of the T10 PI tuple associated with each interval */
+	__u8	lbmd_pi_size;
+	/* Offset in bytes of T10 PI tuple within the logical block metadata */
+	__u8	lbmd_pi_offset;
+	/* T10 PI guard tag type */
+	__u8	lbmd_guard_tag_type;
+	/* Size in bytes of the T10 PI application tag */
+	__u8	lbmd_app_tag_size;
+	/* Size in bytes of the T10 PI reference tag */
+	__u8	lbmd_ref_tag_size;
+	/* Size in bytes of the T10 PI storage tag */
+	__u8	lbmd_storage_tag_size;
+	__u8	pad;
+};
+
+#define FS_IOC_GETLBMD_CAP			_IOWR(0x15, 2, struct logical_block_metadata_cap)
+#endif /* FS_IOC_GETLBMD_CAP */
+
 enum uring_cmd_type {
 	FIO_URING_CMD_NVME = 1,
 };
@@ -73,6 +138,7 @@ struct ioring_data {
 
 	struct io_u **io_u_index;
 	char *md_buf;
+	char *pi_attr;
 
 	int *fds;
 
@@ -436,6 +502,27 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 				sqe->len = 1;
 			}
 		}
+		if (o->md_per_io_size) {
+			struct io_uring_attr_pi *pi_attr = io_u->pi_attr;
+			struct nvme_data *data = FILE_ENG_DATA(io_u->file);
+
+			sqe->attr_type_mask = IORING_RW_ATTR_FLAG_PI;
+			sqe->attr_ptr = (__u64)(uintptr_t)pi_attr;
+			pi_attr->addr = (__u64)(uintptr_t)io_u->mmap_data;
+			pi_attr->len = o->md_per_io_size;
+			pi_attr->app_tag = o->apptag;
+			pi_attr->flags = 0;
+			if (strstr(o->pi_chk, "GUARD") != NULL)
+				pi_attr->flags |= IO_INTEGRITY_CHK_GUARD;
+			if (strstr(o->pi_chk, "REFTAG") != NULL) {
+				__u64 slba = get_slba(data, io_u->offset);
+
+				pi_attr->flags |= IO_INTEGRITY_CHK_REFTAG;
+				pi_attr->seed = (__u32)slba;
+			}
+			if (strstr(o->pi_chk, "APPTAG") != NULL)
+				pi_attr->flags |= IO_INTEGRITY_CHK_APPTAG;
+		}
 		sqe->rw_flags = 0;
 		if (!td->o.odirect && o->uncached)
 			sqe->rw_flags |= RWF_DONTCACHE;
@@ -565,6 +652,7 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 static struct io_u *fio_ioring_event(struct thread_data *td, int event)
 {
 	struct ioring_data *ld = td->io_ops_data;
+	struct ioring_options *o = td->eo;
 	struct io_uring_cqe *cqe;
 	struct io_u *io_u;
 	unsigned index;
@@ -590,6 +678,19 @@ static struct io_u *fio_ioring_event(struct thread_data *td, int event)
 			io_u->error = -cqe->res;
 		else
 			io_u->resid = io_u->xfer_buflen - cqe->res;
+		return io_u;
+	}
+
+	if (o->md_per_io_size) {
+		struct nvme_data *data;
+		int ret;
+
+		data = FILE_ENG_DATA(io_u->file);
+		if (data->pi_type && (io_u->ddir == DDIR_READ) && !o->pi_act) {
+			ret = fio_nvme_pi_verify(data, io_u);
+			if (ret)
+				io_u->error = ret;
+		}
 	}
 
 	return io_u;
@@ -802,6 +903,21 @@ static enum fio_q_status fio_ioring_queue(struct thread_data *td,
 		o->cmd_type == FIO_URING_CMD_NVME)
 		fio_ioring_cmd_nvme_pi(td, io_u);
 
+	if (!strcmp(td->io_ops->name, "io_uring") && o->md_per_io_size) {
+		struct nvme_data *data = FILE_ENG_DATA(io_u->file);
+		struct nvme_cmd_ext_io_opts ext_opts = {0};
+
+		if (data->pi_type) {
+			if (o->pi_act)
+				ext_opts.io_flags |= NVME_IO_PRINFO_PRACT;
+
+			ext_opts.io_flags |= o->prchk;
+			ext_opts.apptag = o->apptag;
+			ext_opts.apptag_mask = o->apptag_mask;
+		}
+		fio_nvme_generate_guard(io_u, &ext_opts);
+	}
+
 	tail = *ring->tail;
 	ring->array[tail & ld->sq_ring_mask] = io_u->index;
 	atomic_store_release(ring->tail, tail + 1);
@@ -920,6 +1036,7 @@ static void fio_ioring_cleanup(struct thread_data *td)
 		fio_cmdprio_cleanup(&ld->cmdprio);
 		free(ld->io_u_index);
 		free(ld->md_buf);
+		free(ld->pi_attr);
 		free(ld->iovecs);
 		free(ld->fds);
 		free(ld->dsm);
@@ -1347,12 +1464,20 @@ static int fio_ioring_init(struct thread_data *td)
 	/* io_u index */
 	ld->io_u_index = calloc(td->o.iodepth, sizeof(struct io_u *));
 
+	if (!strcmp(td->io_ops->name, "io_uring") && o->md_per_io_size) {
+		if (o->apptag_mask != 0xffff) {
+			log_err("fio: io_uring with metadata requires an apptag_mask of 0xffff\n");
+			return 1;
+		}
+	}
+
 	/*
 	 * metadata buffer for nvme command.
 	 * We are only supporting iomem=malloc / mem=malloc as of now.
 	 */
-	if (!strcmp(td->io_ops->name, "io_uring_cmd") &&
-	    (o->cmd_type == FIO_URING_CMD_NVME) && o->md_per_io_size) {
+	if ((!strcmp(td->io_ops->name, "io_uring_cmd") &&
+	    (o->cmd_type == FIO_URING_CMD_NVME) && o->md_per_io_size) ||
+	    (!strcmp(td->io_ops->name, "io_uring") && o->md_per_io_size)) {
 		md_size = (unsigned long long) o->md_per_io_size
 				* (unsigned long long) td->o.iodepth;
 		md_size += page_mask + td->o.mem_align;
@@ -1360,6 +1485,12 @@ static int fio_ioring_init(struct thread_data *td)
 			md_size += td->o.mem_align - page_size;
 		ld->md_buf = malloc(md_size);
 		if (!ld->md_buf) {
+			free(ld);
+			return 1;
+		}
+		ld->pi_attr = calloc(ld->iodepth, sizeof(struct io_uring_attr_pi));
+		if (!ld->pi_attr) {
+			free(ld->md_buf);
 			free(ld);
 			return 1;
 		}
@@ -1429,22 +1560,23 @@ static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
 	struct nvme_pi_data *pi_data;
-	char *p;
+	char *p, *q;
 
 	ld->io_u_index[io_u->index] = io_u;
 
-	if (!strcmp(td->io_ops->name, "io_uring_cmd")) {
-		p = PTR_ALIGN(ld->md_buf, page_mask) + td->o.mem_align;
-		p += o->md_per_io_size * io_u->index;
-		io_u->mmap_data = p;
+	p = PTR_ALIGN(ld->md_buf, page_mask) + td->o.mem_align;
+	p += o->md_per_io_size * io_u->index;
+	io_u->mmap_data = p;
+	q = ld->pi_attr;
+	q += (sizeof(struct io_uring_attr_pi) * io_u->index);
+	io_u->pi_attr = q;
 
-		if (!o->pi_act) {
-			pi_data = calloc(1, sizeof(*pi_data));
-			pi_data->io_flags |= o->prchk;
-			pi_data->apptag_mask = o->apptag_mask;
-			pi_data->apptag = o->apptag;
-			io_u->engine_data = pi_data;
-		}
+	if (!o->pi_act) {
+		pi_data = calloc(1, sizeof(*pi_data));
+		pi_data->io_flags |= o->prchk;
+		pi_data->apptag_mask = o->apptag_mask;
+		pi_data->apptag = o->apptag;
+		io_u->engine_data = pi_data;
 	}
 
 	return 0;
@@ -1463,10 +1595,89 @@ static void fio_ioring_io_u_free(struct thread_data *td, struct io_u *io_u)
 	}
 }
 
+static int fio_get_pi_info(struct fio_file *f, __u64 *nlba, __u32 pi_act,
+			     struct nvme_data *data)
+{
+	struct logical_block_metadata_cap md_cap;
+	int ret;
+	int fd, err = 0;
+
+	fd = open(f->file_name, O_RDONLY);
+	if (fd < 0)
+		return -errno;
+
+	ret = ioctl(fd, FS_IOC_GETLBMD_CAP, &md_cap);
+	if (ret < 0) {
+		err = -errno;
+		log_err("%s: failed to query protection information capabilities; error %d\n", f->file_name, errno);
+		goto out;
+	}
+
+	if (!(md_cap.lbmd_flags & LBMD_PI_CAP_INTEGRITY)) {
+		log_err("%s: Protection information not supported\n", f->file_name);
+		err = -ENOTSUP;
+		goto out;
+	}
+
+	/* Currently we don't support storage tags */
+	if (md_cap.lbmd_storage_tag_size) {
+		log_err("%s: Storage tag not supported\n", f->file_name);
+		err = -ENOTSUP;
+		goto out;
+	}
+
+	data->lba_size = md_cap.lbmd_interval;
+	data->lba_shift = ilog2(data->lba_size);
+	data->ms = md_cap.lbmd_size;
+	data->pi_size = md_cap.lbmd_pi_size;
+	data->pi_loc = !(md_cap.lbmd_pi_offset);
+
+	/* Assume Type 1 PI if reference tags supported */
+	if (md_cap.lbmd_flags & LBMD_PI_CAP_REFTAG)
+		data->pi_type = NVME_NS_DPS_PI_TYPE1;
+	else
+		data->pi_type = NVME_NS_DPS_PI_TYPE3;
+
+	switch (md_cap.lbmd_guard_tag_type) {
+	case LBMD_PI_CSUM_CRC16_T10DIF:
+		data->guard_type = NVME_NVM_NS_16B_GUARD;
+		break;
+	case LBMD_PI_CSUM_CRC64_NVME:
+		data->guard_type = NVME_NVM_NS_64B_GUARD;
+		break;
+	default:
+		log_err("%s: unsupported checksum type %d\n", f->file_name, md_cap.lbmd_guard_tag_type);
+		err = -ENOTSUP;
+		goto out;
+	}
+
+out:
+	close(fd);
+	return err;
+}
+
 static int fio_ioring_open_file(struct thread_data *td, struct fio_file *f)
 {
 	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
+
+	if (o->md_per_io_size) {
+		struct nvme_data *data = NULL;
+		__u64 nlba = 0;
+		int ret;
+
+		data = FILE_ENG_DATA(f);
+		if (data == NULL) {
+			data = calloc(1, sizeof(struct nvme_data));
+			ret = fio_get_pi_info(f, &nlba, o->pi_act, data);
+			if (ret) {
+				free(data);
+				return ret;
+			}
+
+			FILE_SET_ENG_DATA(f, data);
+		}
+	}
 
 	if (!ld || !o->registerfiles)
 		return generic_open_file(td, f);
