@@ -30,6 +30,48 @@
 
 #include <sys/stat.h>
 
+#ifndef FS_IOC_GETPICAP
+/* Protection info capability flags */
+#define	FILE_PI_CAP_INTEGRITY		(1 << 0)
+#define	FILE_PI_CAP_REFTAG		(1 << 1)
+
+/* Checksum types for Protection Information */
+#define FS_PI_CSUM_NONE			0
+#define FS_PI_CSUM_IP			1
+#define FS_PI_CSUM_CRC16_T10DIF		2
+#define FS_PI_CSUM_CRC64_NVME		3
+
+/*
+ * struct fs_pi_cap - protection information(PI) capability descriptor
+ * @fpc_flags:			Bitmask of capability flags
+ * @fpc_interval:		Number of bytes of data per PI tuple
+ * @fpc_csum_type:		Checksum type
+ * @fpc_metadata_size:		Size in bytes of the metadata associated with each interval
+ * @fpc_pi_size:		Size in bytes of the PI associated with each interval
+ * @fpc_tag_size:		Size of the tag area within the tuple
+ * @fpc_pi_offset:		Offset of protection information tuple within the metadata
+ * @fpc_ref_tag_size:		Size in bytes of the reference tag
+ * @fpc_storage_tag_size:	Size in bytes of the storage tag
+ * @fpc_rsvd:			Reserved for future use
+ */
+struct fs_pi_cap {
+	__u32	fpc_flags;
+	__u16	fpc_interval;
+	__u8	fpc_csum_type;
+	__u8	fpc_metadata_size;
+	__u8	fpc_pi_size;
+	__u8	fpc_tag_size;
+	__u8	fpc_pi_offset;
+	__u8	fpc_ref_tag_size;
+	__u8	fpc_storage_tag_size;
+	__u8	fpc_rsvd[19];
+};
+
+#define FS_IOC_GETPICAP			_IOR(0x15, 2, struct fs_pi_cap)
+#endif /* FS_IOC_GETPICAP */
+
+
+
 enum uring_cmd_type {
 	FIO_URING_CMD_NVME = 1,
 };
@@ -1463,10 +1505,78 @@ static void fio_ioring_io_u_free(struct thread_data *td, struct io_u *io_u)
 	}
 }
 
+static int fio_get_pi_info(struct fio_file *f, __u64 *nlba, __u32 pi_act,
+			     struct nvme_data *data)
+{
+	struct fs_pi_cap pi_cap;
+	int ret;
+	int fd, err = 0;
+
+	fd = open(f->file_name, O_RDONLY);
+	if (fd < 0)
+		return -errno;
+
+	ret = ioctl(fd, FS_IOC_GETPICAP, &pi_cap);
+	if (ret < 0) {
+		err = -errno;
+		log_err("%s: failed to query protection information capabilities\n", f->file_name);
+		goto out;
+	}
+
+	/* Currently we don't support storage tags */
+	if (pi_cap.fpc_storage_tag_size) {
+		log_err("%s: Storage tag not supported\n", f->file_name);
+		err = -ENOTSUP;
+		goto out;
+	}
+
+	data->lba_size = pi_cap.fpc_interval;
+	data->ms = pi_cap.fpc_metadata_size;
+	data->pi_size = pi_cap.fpc_pi_size;
+	data->pi_loc = !(pi_cap.fpc_pi_offset);
+
+	dprint(FD_IO, "lba_size: %d, ms: %d, pi_size: %d\n", data->lba_size, data->ms, data->pi_size);
+
+	switch (pi_cap.fpc_csum_type) {
+	case FS_PI_CSUM_CRC16_T10DIF:
+		data->guard_type = NVME_NVM_NS_16B_GUARD;
+		break;
+	case FS_PI_CSUM_CRC64_NVME:
+		data->guard_type = NVME_NVM_NS_64B_GUARD;
+		break;
+	default:
+		log_err("%s: unsupported checksum type %d\n", f->file_name, pi_cap.fpc_csum_type);
+		err = -ENOTSUP;
+		goto out;
+	}
+
+out:
+	close(fd);
+	return err;
+}
+
 static int fio_ioring_open_file(struct thread_data *td, struct fio_file *f)
 {
 	struct ioring_data *ld = td->io_ops_data;
 	struct ioring_options *o = td->eo;
+
+	if (o->md_per_io_size) {
+		struct nvme_data *data = NULL;
+		__u64 nlba = 0;
+		int ret;
+
+		data = FILE_ENG_DATA(f);
+		if (data == NULL) {
+			data = calloc(1, sizeof(struct nvme_data));
+			ret = fio_get_pi_info(f, &nlba, o->pi_act, data);
+			if (ret) {
+				free(data);
+				return ret;
+			}
+
+			FILE_SET_ENG_DATA(f, data);
+		}
+	}
 
 	if (!ld || !o->registerfiles)
 		return generic_open_file(td, f);
