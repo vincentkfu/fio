@@ -110,7 +110,7 @@ static int test_next_free(uint64_t size, int seed)
 	/* Last bit set.  Next free after size - 1 should be 0. */
 	if (check_next_free(map, size - 1, 0))
 		err = 1;
-	
+
 	/* Last 64 bits set.  Next free after size - 66 or size - 65 should be 0. */
 	for (i=size - 65; i < size; i++)
 		axmap_set(map, i);
@@ -118,13 +118,13 @@ static int test_next_free(uint64_t size, int seed)
 		err = 1;
 	if (check_next_free(map, size - 65, 0))
 		err = 1;
-	
+
 	/* Last 64 bits set.  Next free after size - 67 should be size - 66. */
 	if (check_next_free(map, size - 67, size - 66))
 		err = 1;
 
 	axmap_free(map);
-	
+
 	/* Start with a fresh map and mostly fill it up */
 	lfsr_init(&lfsr, size, seed, seed & 0xF);
 	map = axmap_new(size);

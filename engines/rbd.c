@@ -124,7 +124,7 @@ static int _fio_setup_rbd_data(struct thread_data *td,
 
 failed:
 	if (rbd) {
-		if (rbd->aio_events) 
+		if (rbd->aio_events)
 			free(rbd->aio_events);
 		if (rbd->sort_events)
 			free(rbd->sort_events);
@@ -170,7 +170,7 @@ static int _fio_rbd_connect(struct thread_data *td)
 	int r;
 
 	if (o->cluster_name) {
-		char *client_name = NULL; 
+		char *client_name = NULL;
 
 		/*
 		 * If we specify cluster name, the rados_create2
@@ -195,7 +195,7 @@ static int _fio_rbd_connect(struct thread_data *td)
 			free(client_name);
 	} else
 		r = rados_create(&rbd->cluster, o->client_name);
-	
+
 	if (r < 0) {
 		log_err("rados_create failed.\n");
 		goto failed_early;
@@ -603,7 +603,7 @@ static int fio_rbd_setup(struct thread_data *td)
 
 	/* librbd does not allow us to run first in the main thread and later
 	 * in a fork child. It needs to be the same process context all the
-	 * time. 
+	 * time.
 	 */
 	td->o.use_thread = 1;
 

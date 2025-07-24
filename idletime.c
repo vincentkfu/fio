@@ -231,7 +231,7 @@ void fio_idle_prof_init(void)
 	for (i = 0; i < ipc.nr_cpus; i++) {
 		ipt = &ipc.ipts[i];
 
-		ipt->cpu = i;	
+		ipt->cpu = i;
 		ipt->state = TD_NOT_CREATED;
 		ipt->data = (unsigned char *)(ipc.buf + page_size * i);
 
@@ -280,10 +280,10 @@ void fio_idle_prof_init(void)
 		ipt = &ipc.ipts[i];
 		pthread_mutex_unlock(&ipt->init_lock);
 	}
-	
+
 	if (ipc.status == IDLE_PROF_STATUS_ABORT)
 		return;
-	
+
 	/* wait for calibration to finish */
 	for (i = 0; i < ipc.nr_cpus; i++) {
 		ipt = &ipc.ipts[i];
@@ -299,11 +299,11 @@ void fio_idle_prof_init(void)
 			pthread_cond_timedwait(&ipt->cond, &ipt->init_lock, &ts);
 		}
 		pthread_mutex_unlock(&ipt->init_lock);
-	
+
 		/*
 		 * any thread failed to initialize would abort other threads
-		 * later after fio_idle_prof_start. 
-		 */	
+		 * later after fio_idle_prof_start.
+		 */
 		if (ipt->state == TD_EXITED)
 			ipc.status = IDLE_PROF_STATUS_ABORT;
 	}
@@ -373,7 +373,7 @@ void fio_idle_prof_stop(void)
 
 	/*
 	 * memory allocations are freed via explicit fio_idle_prof_cleanup
-	 * after profiling stats are collected by apps.  
+	 * after profiling stats are collected by apps.
 	 */
 }
 
@@ -429,7 +429,7 @@ int fio_idle_prof_parse_opt(const char *args)
 	if (!args) {
 		log_err("fio: empty idle-prof option string\n");
 		return -1;
-	}	
+	}
 
 #if defined(FIO_HAVE_CPU_AFFINITY) && defined(CONFIG_SCHED_IDLE)
 	if (strcmp("calibrate", args) == 0) {
@@ -448,7 +448,7 @@ int fio_idle_prof_parse_opt(const char *args)
 	} else {
 		log_err("fio: incorrect idle-prof option: %s\n", args);
 		return -1;
-	}	
+	}
 #else
 	log_err("fio: idle-prof not supported on this platform\n");
 	return -1;

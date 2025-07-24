@@ -36,7 +36,7 @@
  *    io_u_mark_depth()			called in td_io_queue()
  *    io_u_mark_submit/complete()	called in queue()
  *    issue_time			set in td_io_queue()
- *  
+ *
  * In async mode:
  *  /dev/sgY with direct=0 and sync=0
  *   RW: read and write operations are submitted in queue()

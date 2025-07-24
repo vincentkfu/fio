@@ -19,7 +19,7 @@ static inline int arch_ffz(unsigned long bitmask)
 		return 63;
 
 	__asm__ __volatile__ ("rbit %1, %2\n"
-			      "clz %0, %1\n" : 
+			      "clz %0, %1\n" :
 			      "=r"(count), "=&r"(reversed_bits) :
 			      "r"(~bitmask));
 	return count;

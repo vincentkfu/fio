@@ -175,7 +175,7 @@ static int account_unique_capacity(uint64_t offset, uint64_t *unique_capacity,
 
 static void add_item(struct chunk *c, struct item *i)
 {
-	/*	
+	/*
 	 * Save some memory and don't add extent items, if we don't
 	 * use them.
 	 */

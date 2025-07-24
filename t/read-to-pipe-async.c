@@ -266,7 +266,7 @@ static void *writer_fn(void *data)
 
 		if (work)
 			flist_add_tail(&work->list, &wt->done_list);
-	
+
 		work = find_seq(wt, seq);
 		if (work)
 			flist_del_init(&work->list);
@@ -350,7 +350,7 @@ static void reader_work(struct work_item *work)
 		}
 
 		pthread_mutex_unlock(&rt->thread.lock);
-	
+
 		if (work) {
 write_it:
 			write_work(work);

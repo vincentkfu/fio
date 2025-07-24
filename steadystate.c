@@ -358,7 +358,7 @@ uint64_t steadystate_bw_mean(const struct thread_stat *ts)
 	int i;
 	uint64_t sum;
 	int intervals = ts->ss_dur / (ss_check_interval / 1000L);
-	
+
 	if (!ts->ss_dur)
 		return 0;
 

@@ -26,7 +26,7 @@
 
 extern int evaluate_arithmetic_expression(const char *buffer, long long *ival,
 					  double *dval, double implied_units, int is_time);
- 
+
 int main(int argc, char *argv[])
 {
 	int rc, bye = 0;

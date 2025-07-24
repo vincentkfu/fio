@@ -72,7 +72,7 @@ static int fio_gf_io_u_init(struct thread_data *td, struct io_u *io_u)
 {
     struct fio_gf_iou *io;
 	dprint(FD_FILE, "%s\n", __FUNCTION__);
-    
+
     io = malloc(sizeof(struct fio_gf_iou));
     if (!io) {
         td_verror(td, errno, "malloc");

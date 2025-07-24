@@ -152,7 +152,7 @@ static int fio_hdfsio_prep(struct thread_data *td, struct io_u *io_u)
 		log_err("hdfs: Invalid I/O Operation\n");
 		return 0;
 	}
-	
+
 	get_chunck_name(fname, io_u->file->file_name, f_id);
 	hd->fp = hdfsOpenFile(hd->fs, fname, open_flags, 0, 0,
 			      options->chunck_size);
@@ -172,10 +172,10 @@ static enum fio_q_status fio_hdfsio_queue(struct thread_data *td,
 	struct hdfsio_options *options = td->eo;
 	int ret;
 	unsigned long offset;
-	
+
 	offset = io_u->offset % options->chunck_size;
-	
-	if( (io_u->ddir == DDIR_READ || io_u->ddir == DDIR_WRITE) && 
+
+	if( (io_u->ddir == DDIR_READ || io_u->ddir == DDIR_WRITE) &&
 	     hdfsTell(hd->fs, hd->fp) != offset && hdfsSeek(hd->fs, hd->fp, offset) != 0 ) {
 		log_err("hdfs: seek failed: %s, are you doing random write smaller than chunk size ?\n", strerror(errno));
 		io_u->error = errno;
@@ -248,8 +248,8 @@ static int fio_hdfsio_io_u_init(struct thread_data *td, struct io_u *io_u)
 	uint64_t j,k;
 	int i, failure = 0;
 	uint8_t buffer[CHUNCK_CREATION_BUFFER_SIZE];
-	uint64_t bytes_left;	
-	char fname[CHUNCK_NAME_LENGTH_MAX];	
+	uint64_t bytes_left;
+	char fname[CHUNCK_NAME_LENGTH_MAX];
 	hdfsFile fp;
 	hdfsFileInfo *fi;
 	tOffset fi_size;
@@ -299,7 +299,7 @@ static int fio_hdfsio_io_u_init(struct thread_data *td, struct io_u *io_u)
 			break;
 		}
 	}
-	
+
 	if( !failure ) {
 		fio_file_set_size_known(f);
 	}
@@ -316,12 +316,12 @@ static int fio_hdfsio_setup(struct thread_data *td)
 
 	if (!td->io_ops_data) {
 		hd = calloc(1, sizeof(*hd));
-		
+
 		hd->curr_file_id = -1;
 
 		td->io_ops_data = hd;
 	}
-	
+
 	total_file_size = 0;
 	file_size = 0;
 
@@ -359,7 +359,7 @@ static int fio_hdfsio_init(struct thread_data *td)
 		log_err("hdfs: server not defined\n");
 		return EINVAL;
 	}
-	
+
 	bld = hdfsNewBuilder();
 	if (!bld) {
 		failure = errno;
@@ -372,14 +372,14 @@ static int fio_hdfsio_init(struct thread_data *td)
 		hdfsBuilderSetForceNewInstance(bld);
 	}
 	hd->fs = hdfsBuilderConnect(bld);
-	
+
 	/* hdfsSetWorkingDirectory succeed on non-existent directory */
 	if (hdfsExists(hd->fs, options->directory) < 0 || hdfsSetWorkingDirectory(hd->fs, options->directory) < 0) {
 		failure = errno;
 		log_err("hdfs: invalid working directory %s: %s\n", options->directory, strerror(errno));
 		return failure;
 	}
-	
+
 	return 0;
 }
 

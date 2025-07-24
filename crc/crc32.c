@@ -1,4 +1,4 @@
-/* crc32 -- calculate and POSIX.2 checksum 
+/* crc32 -- calculate and POSIX.2 checksum
    Copyright (C) 92, 1995-1999 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify

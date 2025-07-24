@@ -23,7 +23,7 @@ struct fio_filelock {
 };
 
 #define MAX_FILELOCKS	1024
-	
+
 static struct filelock_data {
 	struct flist_head list;
 	struct fio_sem lock;

@@ -216,7 +216,7 @@ static enum fio_q_status fio_libnfs_queue(struct thread_data *td,
 }
 
 /*
- * Do a mount if one has not been done before 
+ * Do a mount if one has not been done before
  */
 static int do_mount(struct thread_data *td, const char *url)
 {

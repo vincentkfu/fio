@@ -55,7 +55,7 @@ static inline uint64_t __hash_u64(uint64_t val)
 {
 	return val * GOLDEN_RATIO_64;
 }
-	
+
 static inline unsigned long hash_ptr(void *ptr, unsigned int bits)
 {
 	return hash_long((uintptr_t)ptr, bits);

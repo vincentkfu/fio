@@ -11,7 +11,7 @@ typedef struct graph_label * graph_label_t;
 struct graph *graph_new(unsigned int xdim, unsigned int ydim, const char *font);
 /* graph_new() Returns a new graph structure of the given dimensions and font */
 void graph_set_size(struct graph *g, unsigned int xdim, unsigned int ydim);
-/* graph_set_size() Changes the size of a graph to the given dimensions. */ 
+/* graph_set_size() Changes the size of a graph to the given dimensions. */
 void graph_set_position(struct graph *g, double xoffset, double yoffset);
 /* graph_set_position() sets the x- and y-offset to translate the graph */
 void bar_graph_draw(struct graph *g, cairo_t *cr);
@@ -20,7 +20,7 @@ void line_graph_draw(struct graph *g, cairo_t *cr);
 /* line_graph_draw draws the given graph as a line graph */
 void line_graph_set_data_count_limit(struct graph *g, int per_label_limit);
 /* line_graph_set_data_count_limit() limits the amount of data which can
- * be added to a line graph.  Once the limit is reached, the oldest data 
+ * be added to a line graph.  Once the limit is reached, the oldest data
  * is discarded as new data is added
  */
 void graph_set_font(struct graph *g, const char *font);
@@ -46,7 +46,7 @@ graph_label_t graph_add_label(struct graph *g, const char *label);
  *  -----------------------       -------------------------
  *                                    A       B       C
  *
- * For a line graph, the 'x's     For a bar graph, 
+ * For a line graph, the 'x's     For a bar graph,
  * would be on one "label", and   'A', 'B', and 'C'
  * the '*'s would be on another   are the labels.
  * label.
@@ -77,8 +77,8 @@ void graph_y_axis_unit_change_notify(struct graph *g, graph_axis_unit_change_cal
  * so that you can know how the labels are shorted, typically used to adjust the axis
  * titles to display the proper units.  The power_of_ten parameter indicates what power
  * of ten the labels have been divided by (9, 6, 3, or 0, corresponding to billions,
- * millions, thousands and ones. 
- */ 
+ * millions, thousands and ones.
+ */
 
 void graph_add_extra_space(struct graph *g, double left_percent, double right_percent,
 				double top_percent, double bottom_percent);

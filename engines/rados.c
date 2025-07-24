@@ -376,7 +376,7 @@ int fio_rados_getevents(struct thread_data *td, unsigned int min,
 			pthread_cond_wait(&rados->completed_more_io, &rados->completed_lock);
 		}
 		assert(!flist_empty(&rados->completed_operations));
-		
+
 		fri = flist_first_entry(&rados->completed_operations, struct fio_rados_iou, list);
 		assert(fri->completion);
 		assert(rados_aio_is_complete(fri->completion));

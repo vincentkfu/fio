@@ -1,7 +1,7 @@
 /*
  * falloc: ioengine for git://git.kernel.dk/fio.git
  *
- * IO engine that does regular fallocate to simulate data transfer 
+ * IO engine that does regular fallocate to simulate data transfer
  * as fio ioengine.
  * DDIR_READ  does fallocate(,mode = FALLOC_FL_KEEP_SIZE,)
  * DDIR_WRITE does fallocate(,mode = 0) : fallocate with size extension

@@ -165,7 +165,7 @@ void fio_sha512_update(struct fio_sha512_ctx *sctx, const uint8_t *data,
 
 	/* Compute number of bytes mod 128 */
 	idx = (unsigned int)((sctx->count[0] >> 3) & 0x7F);
-	
+
 	/* Update number of bits */
 	if ((sctx->count[0] += (len << 3)) < (len << 3)) {
 		if ((sctx->count[1] += 1) < 1)
@@ -173,9 +173,9 @@ void fio_sha512_update(struct fio_sha512_ctx *sctx, const uint8_t *data,
 				sctx->count[3]++;
 		sctx->count[1] += (len >> 29);
 	}
-	
+
         part_len = 128 - idx;
-	
+
 	/* Transform as many times as possible. */
 	if (len >= part_len) {
 		memcpy(&sctx->buf[idx], data, part_len);
