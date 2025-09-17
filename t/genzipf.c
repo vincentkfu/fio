@@ -51,9 +51,11 @@ static int dist_type = TYPE_ZIPF;
 static unsigned long gib_size = 500;
 static unsigned long block_size = 4096;
 static unsigned long output_nranges = DEF_NR_OUTPUT;
+static unsigned long long count = 0;
 static double percentage;
 static double dist_val;
 static int output_type = OUTPUT_NORMAL;
+static bool debug = false;
 
 #define DEF_ZIPF_VAL	1.2
 #define DEF_PARETO_VAL	0.3
@@ -61,21 +63,6 @@ static int output_type = OUTPUT_NORMAL;
 static unsigned int hashv(unsigned long long val)
 {
 	return jhash(&val, sizeof(val), 0) & (hash_size - 1);
-}
-
-static struct node *hash_lookup(unsigned long long val)
-{
-	struct flist_head *l = &hash[hashv(val)];
-	struct flist_head *entry;
-	struct node *n;
-
-	flist_for_each(entry, l) {
-		n = flist_entry(entry, struct node, list);
-		if (n->val == val)
-			return n;
-	}
-
-	return NULL;
 }
 
 static void hash_insert(struct node *n, unsigned long long val)
@@ -103,7 +90,7 @@ static void usage(void)
 
 static int parse_options(int argc, char *argv[])
 {
-	const char *optstring = "t:g:i:o:b:p:ch";
+	const char *optstring = "t:g:i:o:b:p:n:chd";
 	int c, dist_val_set = 0;
 
 	while ((c = getopt(argc, argv, optstring)) != -1) {
@@ -141,6 +128,12 @@ static int parse_options(int argc, char *argv[])
 			break;
 		case 'c':
 			output_type = OUTPUT_CSV;
+			break;
+		case 'n':
+			count = strtoul(optarg, NULL, 10);
+			break;
+		case 'd':
+			debug = true;
 			break;
 		default:
 			printf("bad option %c\n", c);
@@ -279,22 +272,24 @@ static void output_normal(struct node *nodes, unsigned long nnodes,
 int main(int argc, char *argv[])
 {
 	unsigned long offset;
-	unsigned long long nranges;
+	unsigned long long nranges, *counts;
 	unsigned long nnodes;
 	struct node *nodes;
 	struct zipf_state zs;
 	struct gauss_state gs;
-	int i, j;
+	unsigned long long i, j;
 
 	if (parse_options(argc, argv))
 		return 1;
 
-	if (output_type != OUTPUT_CSV)
-		printf("Generating %s distribution with %f input and %lu GiB size and %lu block_size.\n",
-		       dist_types[dist_type], dist_val, gib_size, block_size);
-
 	nranges = gib_size * 1024 * 1024 * 1024ULL;
 	nranges /= block_size;
+	if (!count)
+		count = nranges;
+
+	if (output_type != OUTPUT_CSV)
+		printf("Generating %llu samples from the %s distribution with parameter %f, %lu GiB size, %lu block_size.\n",
+		       count, dist_types[dist_type], dist_val, gib_size, block_size);
 
 	if (dist_type == TYPE_ZIPF)
 		zipf_init(&zs, nranges, dist_val, -1, 1);
@@ -315,10 +310,9 @@ int main(int argc, char *argv[])
 		INIT_FLIST_HEAD(&hash[i]);
 
 	nodes = malloc(nranges * sizeof(struct node));
+	counts = calloc(nranges, sizeof(*counts));
 
-	for (i = j = 0; i < nranges; i++) {
-		struct node *n;
-
+	for (i = 0; i < count; i++) {
 		if (dist_type == TYPE_ZIPF)
 			offset = zipf_next(&zs);
 		else if (dist_type == TYPE_PARETO)
@@ -326,12 +320,16 @@ int main(int argc, char *argv[])
 		else
 			offset = gauss_next(&gs);
 
-		n = hash_lookup(offset);
-		if (n)
-			n->hits++;
-		else {
-			hash_insert(&nodes[j], offset);
+		counts[offset]++;
+	}
+
+	for (i = j = 0; i < nranges; i++) {
+		if (counts[i]) {
+			hash_insert(&nodes[j], i);
+			nodes[j].hits = counts[i];
 			j++;
+			if (debug)
+				printf("Count %llu for offset %llu\n", counts[i], i);
 		}
 	}
 
