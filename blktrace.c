@@ -495,6 +495,7 @@ bool read_blktrace(struct thread_data* td)
 			td_verror(td, -ret, "blktrace lseek");
 			goto err;
 		}
+
 		if ((t.action & BLK_TC_ACT(BLK_TC_NOTIFY)) == 0) {
 			if ((t.action & 0xffff) == __BLK_TA_QUEUE)
 				depth_inc(&t, this_depth);
@@ -509,6 +510,10 @@ bool read_blktrace(struct thread_data* td)
 				continue;
 			}
 		}
+
+		if (fio_option_is_set(&td->o, blktrace_cpu) &&
+				td->o.blktrace_cpu != t.cpu)
+			continue;
 
 		if (!queue_trace(td, &t, ios, rw_bs, &cache))
 			continue;

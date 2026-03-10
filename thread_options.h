@@ -302,6 +302,7 @@ struct thread_options {
 	char *merge_blktrace_file;
 	fio_fp64_t merge_blktrace_scalars[FIO_IO_U_LIST_MAX_LEN];
 	fio_fp64_t merge_blktrace_iters[FIO_IO_U_LIST_MAX_LEN];
+	unsigned int blktrace_cpu;
 
 	unsigned int write_bw_log;
 	unsigned int write_lat_log;
@@ -639,11 +640,13 @@ struct thread_options_pack {
 	uint8_t merge_blktrace_file[FIO_TOP_STR_MAX];
 	fio_fp64_t merge_blktrace_scalars[FIO_IO_U_LIST_MAX_LEN];
 	fio_fp64_t merge_blktrace_iters[FIO_IO_U_LIST_MAX_LEN];
+	uint32_t blktrace_cpu;
 
 	uint32_t write_bw_log;
 	uint32_t write_lat_log;
 	uint32_t write_iops_log;
 	uint32_t write_hist_log;
+	uint32_t pad3;
 
 	uint8_t bw_log_file[FIO_TOP_STR_MAX];
 	uint8_t lat_log_file[FIO_TOP_STR_MAX];

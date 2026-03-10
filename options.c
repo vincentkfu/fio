@@ -3762,6 +3762,15 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group	= FIO_OPT_G_IOLOG,
 	},
 	{
+		.name	= "blktrace_cpu",
+		.lname	= "Replay only IOs submitted by specified CPU",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct thread_options, blktrace_cpu),
+		.help	= "Replay only IOs submitted by specified CPU",
+		.category = FIO_OPT_C_IO,
+		.group = FIO_OPT_G_IOLOG,
+	},
+	{
 		.name	= "exec_prerun",
 		.lname	= "Pre-execute runnable",
 		.type	= FIO_OPT_STR_STORE,
