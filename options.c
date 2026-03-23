@@ -3900,6 +3900,15 @@ struct fio_option fio_options[FIO_MAX_OPTS] = {
 		.group = FIO_OPT_G_IOLOG,
 	},
 	{
+		.name	= "blktrace_split_cpus",
+		.lname	= "Number of unique CPUs to track and split among numjobs (default=0 which meeans disabled)",
+		.type	= FIO_OPT_INT,
+		.off1	= offsetof(struct thread_options, blktrace_split_cpus),
+		.help	= "Number of unique CPUs to track and split among numjobs (default=0 which meeans disabled)",
+		.category = FIO_OPT_C_IO,
+		.group = FIO_OPT_G_IOLOG,
+	},
+	{
 		.name	= "exec_prerun",
 		.lname	= "Pre-execute runnable",
 		.type	= FIO_OPT_STR_STORE,
