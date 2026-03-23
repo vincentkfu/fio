@@ -440,6 +440,40 @@ err:
 	return false;
 }
 
+struct cpu_table {
+	unsigned int size;
+	unsigned int list[];
+};
+
+static struct cpu_table *init_table(unsigned int size)
+{
+	return calloc(size+1, sizeof(unsigned int));
+}
+
+static bool in_table(struct cpu_table *table, unsigned int cpu)
+{
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+	for (unsigned int i = 0; i < table->size; i++)
+		if (table->list[i] == cpu)
+			return true;
+#pragma GCC diagnostic pop
+
+	return false;
+}
+
+static void add_table(struct cpu_table *table, unsigned int cpu)
+{
+	table->list[table->size] = cpu;
+	table->size++;
+	return;
+}
+
+unsigned int table_length(struct cpu_table *table)
+{
+	return table->size;
+}
+
 bool read_blktrace(struct thread_data* td)
 {
 	struct blk_io_trace t;
@@ -456,6 +490,9 @@ bool read_blktrace(struct thread_data* td)
 	int this_depth[DDIR_RWDIR_CNT] = { };
 	int depth[DDIR_RWDIR_CNT] = { };
 	int64_t items_to_fetch = 0;
+	static struct cpu_table *cpu_list = NULL;
+	static unsigned int this_cpu = UINT_MAX;
+
 
 	if (td->o.read_iolog_chunked) {
 		items_to_fetch = iolog_items_to_fetch(td);
@@ -464,6 +501,8 @@ bool read_blktrace(struct thread_data* td)
 	}
 
 	skipped_writes = 0;
+	if (td->o.blktrace_split_cpus && !cpu_list)
+		cpu_list = init_table(td->o.blktrace_split_cpus);
 	do {
 		int ret = fread(&t, 1, sizeof(t), f);
 
@@ -515,6 +554,46 @@ bool read_blktrace(struct thread_data* td)
 				td->o.blktrace_cpu != t.cpu)
 			continue;
 
+		if (td->o.blktrace_split_cpus) {
+			if (!(t.action & (BLK_TC_ACT(BLK_TC_DISCARD) |
+					BLK_TC_ACT(BLK_TC_FLUSH) |
+					BLK_TC_ACT(BLK_TC_WRITE) |
+					BLK_TC_ACT(BLK_TC_READ))))
+				goto cpu_done;
+
+			// if the cpu for this thread has already been set and does not match continue
+			if (this_cpu != UINT_MAX) {
+				if (this_cpu != t.cpu) {
+					dprint(FD_BLKTRACE, "cpu %u does not match %u--skipping\n", this_cpu, t.cpu);
+					continue;
+				} else {
+					dprint(FD_BLKTRACE, "cpu %u does match %u--queueing\n", this_cpu, t.cpu);
+					goto cpu_done;
+				}
+			}
+
+			// if the cpu is found in the hash table continue;
+			if (in_table(cpu_list, t.cpu)) {
+				dprint(FD_BLKTRACE, "cpu %d already in table--skipping\n", t.cpu);
+				continue;
+			}
+
+			// add the cpu to the hash table
+			add_table(cpu_list, t.cpu);
+			dprint(FD_BLKTRACE, "adding cpu %u to table\n", t.cpu);
+
+			// if the new cpu is not the one for this thread continue;
+			if (table_length(cpu_list) != td->subjob_number+1) {
+				dprint(FD_BLKTRACE, "current IO not for subjob %d--skipping\n", td->subjob_number);
+				continue;
+			}
+
+			// update the cpu number for this thread
+			this_cpu = t.cpu;
+			dprint(FD_BLKTRACE, "chose %u cpu for subjob %d\n", t.cpu, td->subjob_number);
+		}
+
+cpu_done:
 		if (!queue_trace(td, &t, ios, rw_bs, &cache))
 			continue;
 
@@ -575,6 +654,7 @@ bool read_blktrace(struct thread_data* td)
 			depth[i] = 1;
 		max_depth = max(depth[i], max_depth);
 	}
+	dprint(FD_BLKTRACE, "probed queue depth was %d\n", max_depth);
 
 	if (!ios[DDIR_READ] && !ios[DDIR_WRITE] && !ios[DDIR_TRIM] &&
 	    !ios[DDIR_SYNC]) {
