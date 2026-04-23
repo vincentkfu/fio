@@ -12,6 +12,7 @@
 #include "../log.h"
 #include "../os/os.h"
 #include "../verify-state.h"
+#include "../verify.h"
 #include "../crc/crc32c.h"
 #include "debug.h"
 
