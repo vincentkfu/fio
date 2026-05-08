@@ -2662,7 +2662,7 @@ with the caveat that when used on the command line, they must come after the
 
 	Enable Flexible Data Placement mode for write commands.
 
-.. option:: dataplacement=str : [io_uring_cmd] [xnvme]
+.. option:: dataplacement=str : [io_uring] [io_uring_cmd] [xnvme]
 
         Specifies the data placement directive type to use for write commands.
         The following types are supported:
@@ -2677,9 +2677,10 @@ with the caveat that when used on the command line, they must come after the
                         :option:`fdp` =1.
 
                **streams**
-                        Use Streams directives for write commands.
+                        Use Streams directives for write commands. For the
+                        io_uring ioengine, this enables write streams.
 
-.. option:: plid_select=str, fdp_pli_select=str : [io_uring_cmd] [xnvme]
+.. option:: plid_select=str, fdp_pli_select=str : [io_uring] [io_uring_cmd] [xnvme]
 
 	Defines how fio decides which placement ID to use next. The following
 	types are defined:
@@ -2698,7 +2699,7 @@ with the caveat that when used on the command line, they must come after the
 	The available placement ID (indices) are defined by the option :option:`fdp_pli`
 	or :option:`plids` except for the case of **scheme**.
 
-.. option:: plids=str, fdp_pli=str : [io_uring_cmd] [xnvme]
+.. option:: plids=str, fdp_pli=str : [io_uring] [io_uring_cmd] [xnvme]
 
         Select which Placement ID Indices (FDP) or Placement IDs (streams) this
         job is allowed to use for writes. This option accepts a comma-separated

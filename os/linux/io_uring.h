@@ -64,6 +64,11 @@ struct io_uring_sqe {
 	union {
 		__s32	splice_fd_in;
 		__u32	file_index;
+		struct {
+			__u8  	write_stream;
+			__u8   	__pad3[3];
+		};
+
 	};
 	union {
 		struct {
