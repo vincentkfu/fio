@@ -2408,7 +2408,7 @@ statx with STATX_WRITE_ATOMIC.
 .BI (io_uring_cmd,xnvme)fdp \fR=\fPbool
 Enable Flexible Data Placement mode for write commands.
 .TP
-.BI (io_uring_cmd,xnvme)dataplacement \fR=\fPstr
+.BI (io_uring,io_uring_cmd,xnvme)dataplacement \fR=\fPstr
 Specifies the data placement directive type to use for write commands. The
 following types are supported:
 .RS
@@ -2422,11 +2422,11 @@ Use Flexible Data placement directives for write commands. This is equivalent
 to specifying \fBfdp\fR=1.
 .TP
 .B streams
-Use Streams directives for write commands.
+Use Streams directives for write commands. For the io_uring ioengine, this enables write streams.
 .RE
 .RE
 .TP
-.BI (io_uring_cmd,xnvme)plid_select=str, fdp_pli_select \fR=\fPstr
+.BI (io_uring,io_uring_cmd,xnvme)plid_select=str, fdp_pli_select \fR=\fPstr
 Defines how fio decides which placement ID to use next. The following types
 are defined:
 .RS
@@ -2447,7 +2447,7 @@ The available placement ID (indices) are defined by \fBplids\fR or
 \fBfdp_pli\fR option except for the case of \fBscheme\fP.
 .RE
 .TP
-.BI (io_uring_cmd,xnvme)plids=str, fdp_pli \fR=\fPstr
+.BI (io_uring,io_uring_cmd,xnvme)plids=str, fdp_pli \fR=\fPstr
 Select which Placement ID Indices (FDP) or Placement IDs (streams) this job is
 allowed to use for writes. This option accepts a comma-separated list of values
 or ranges (e.g., 1,2-4,5,6-8).

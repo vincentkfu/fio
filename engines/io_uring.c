@@ -534,6 +534,10 @@ static int fio_ioring_prep(struct thread_data *td, struct io_u *io_u)
 			sqe->rw_flags |= RWF_NOWAIT;
 		if (td->o.oatomic && io_u->ddir == DDIR_WRITE)
 			sqe->rw_flags |= RWF_ATOMIC;
+		if (io_u->ddir == DDIR_WRITE && td->o.dp_type == FIO_DP_STREAMS) {
+			sqe->write_stream = io_u->dspec;
+			dprint(FD_IO, "set write_stream to %u for dspec IO\n", io_u->dspec);
+		}
 
 		/*
 		 * Since io_uring can have a submission context (sqthread_poll)
