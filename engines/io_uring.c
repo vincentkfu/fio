@@ -1038,7 +1038,7 @@ static int fio_ioring_getevents(struct thread_data *td, unsigned int min,
 	ld->cq_ring_off = *ring->head;
 	for (;;) {
 		r = fio_ioring_cqring_reap(td, max - events);
-		if (r) {
+		if (r || !min) {
 			events += r;
 			if (events >= min)
 				return events;
