@@ -22,6 +22,24 @@ from pathlib import Path
 from fiotestcommon import get_file, SUCCESS_DEFAULT
 
 
+def _extract_json_payload(file_data):
+    """Extract JSON payload from mixed stdout-style output."""
+
+    lines = file_data.splitlines()
+    start = next((i for i, line in enumerate(lines) if line.strip() == "{"), None)
+    end = next((i for i, line in enumerate(reversed(lines)) if line.strip() == "}"), None)
+    if start is not None and end is not None:
+        end = len(lines) - end
+        return '\n'.join(lines[start:end])
+
+    start = file_data.find("{")
+    end = file_data.rfind("}")
+    if start == -1 or end == -1 or end < start:
+        return None
+
+    return file_data[start:end + 1]
+
+
 class FioTest():
     """Base for all fio tests."""
 
@@ -265,9 +283,12 @@ class FioJobFileTest(FioExeTest):
         # output, especially under Windows. Try to decode output as JSON data,
         # skipping outside the first { and last }
         #
-        lines = file_data.splitlines()
-        last = len(lines) - lines[::-1].index("}")
-        file_data = '\n'.join(lines[lines.index("{"):last])
+        file_data = _extract_json_payload(file_data)
+        if file_data is None:
+            self.failure_reason = f"{self.failure_reason} unable to locate JSON data,"
+            self.passed = False
+            return
+
         try:
             self.json_data = json.loads(file_data)
         except json.JSONDecodeError:
@@ -326,9 +347,10 @@ class FioJobCmdTest(FioExeTest):
         # output, especially under Windows. Try to decode output as JSON data,
         # skipping outside the first { and last }
         #
-        lines = file_data.splitlines()
-        last = len(lines) - lines[::-1].index("}")
-        file_data = '\n'.join(lines[lines.index("{"):last])
+        file_data = _extract_json_payload(file_data)
+        if file_data is None:
+            return False
+
         try:
             self.json_data = json.loads(file_data)
         except json.JSONDecodeError:
