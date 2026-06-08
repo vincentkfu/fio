@@ -191,6 +191,12 @@ def parse_args():
     return args
 
 
+def fio_relpath(target, start):
+    """Return a fio-friendly relative path."""
+
+    return os.path.relpath(target, start).replace(os.sep, '/')
+
+
 def main():
     """Run tests using fio's io_uring_cmd ioengine to send NVMe pass through commands."""
 
@@ -238,7 +244,7 @@ def main():
         for test in TEST_LIST:
             test['fio_opts']['ioengine'] = ioengine
             test['fio_opts']['verify_state_save'] = 1
-            test['fio_opts']['rw'].replace("read", "write")
+            test['fio_opts']['rw'] = test['fio_opts']['rw'].replace("read", "write")
             test['fio_opts'].pop('verify_state_load', None)
             test['fio_opts'].pop('directory', None)
             test['fio_opts'].pop('aux-path', None)
@@ -261,9 +267,11 @@ def main():
             test['fio_opts']['verify_state_save'] = 0  # don't overwrite vssave file
             test['fio_opts']['verify_state_load'] = 1
             test['fio_opts']['verify_only'] = 1
-            directory = os.path.join(artifact_root, ioengine, "verify-state-save", f"{test['test_id']:04d}")
-            if platform.system() != "Windows":
-                directory = str(Path(directory).absolute()).replace(':', '\\:')
+            save_dir = os.path.join(artifact_root, ioengine, "verify-state-save",
+                                    f"{test['test_id']:04d}")
+            verify_dir = os.path.join(artifact_root, ioengine, "verify-only",
+                                      f"{test['test_id']:04d}")
+            directory = fio_relpath(save_dir, verify_dir)
             test['fio_opts']['directory'] = directory
             test['fio_opts']['aux-path'] = directory
 
@@ -284,7 +292,7 @@ def main():
         #
         for test in TEST_LIST:
             test['fio_opts'].pop('verify_only', None)
-            test['fio_opts']['rw'].replace("write", "read")
+            test['fio_opts']['rw'] = test['fio_opts']['rw'].replace("write", "read")
             if test['fio_opts']['rw'] == 'randrw':
                 test['force_skip'] = True
                 # there is no 100% read equivalent of a randrw verify workload,
