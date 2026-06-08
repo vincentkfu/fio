@@ -26,6 +26,12 @@ main() {
         skip+=(
             18
         )
+        if [ "${CI_TARGET_OS}" == "oracle" ]; then
+            # Oracle Linux container intermittently fails verify.py test 1017
+            skip+=(
+                1017
+            )
+        fi
 	# cmd priority does not work in containers
 	# so skip the related latency test cases
 	args+=(
