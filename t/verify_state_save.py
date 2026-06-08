@@ -278,6 +278,9 @@ def main():
         #
         # set up tests with verify_state_save=1 to generate verify state save files
         #
+        test_env['artifact_root'] = os.path.join(artifact_root, ioengine, "verify-state-save")
+        os.makedirs(test_env['artifact_root'])
+
         for test in TEST_LIST:
             test['fio_opts']['ioengine'] = ioengine
             test['fio_opts']['verify_state_save'] = 1
@@ -286,9 +289,6 @@ def main():
             test['fio_opts'].pop('directory', None)
             test['fio_opts'].pop('aux-path', None)
             test['force_skip'] = False
-
-        test_env['artifact_root'] = os.path.join(artifact_root, ioengine, "verify-state-save")
-        os.makedirs(test_env['artifact_root'])
 
         print(f"\nRunning verify_state_save=1 tests with ioengine={ioengine}")
         passed, failed, skipped = run_fio_tests(TEST_LIST, test_env, args)
@@ -300,19 +300,19 @@ def main():
         #
         # set up same tests with verify_state_load=1 and verify_only=1
         #
+        test_env['artifact_root'] = os.path.join(artifact_root, ioengine, "verify-only")
+        os.makedirs(test_env['artifact_root'])
+
         for test in TEST_LIST:
             test['fio_opts']['verify_state_save'] = 0  # don't overwrite vssave file
             test['fio_opts']['verify_state_load'] = 1
             test['fio_opts']['verify_only'] = 1
-            directory = os.path.join(artifact_root, ioengine, "verify-state-save", f"{test['test_id']:04d}")
-            if platform.system() != "Windows":
-                directory = str(Path(directory).absolute()).replace(':', '\\:')
+            vss_dir = os.path.join(artifact_root, ioengine, "verify-state-save", f"{test['test_id']:04d}")
+            this_dir = os.path.join(test_env['artifact_root'], f"{test['test_id']:04d}")
+            directory = os.path.relpath(vss_dir, this_dir)
             test['fio_opts']['directory'] = directory
             test['fio_opts']['aux-path'] = directory
 
-
-        test_env['artifact_root'] = os.path.join(artifact_root, ioengine, "verify-only")
-        os.makedirs(test_env['artifact_root'])
 
         print(f"\nRunning verify_only=1 tests with ioengine={ioengine}")
         passed, failed, skipped = run_fio_tests(TEST_LIST, test_env, args)
@@ -325,6 +325,9 @@ def main():
         # now run the same verify_state_load=1 tests replacing randwrite with
         # randread
         #
+        test_env['artifact_root'] = os.path.join(artifact_root, ioengine, "read")
+        os.makedirs(test_env['artifact_root'])
+
         for test in TEST_LIST:
             test['fio_opts'].pop('verify_only', None)
             test['fio_opts']['rw'] = test['fio_opts']['rw'].replace("write", "read")
@@ -332,9 +335,6 @@ def main():
                 test['force_skip'] = True
                 # there is no 100% read equivalent of a randrw verify workload,
                 # so just skip these tests when run in read mode
-
-        test_env['artifact_root'] = os.path.join(artifact_root, ioengine, "read")
-        os.makedirs(test_env['artifact_root'])
 
         print(f"\nRunning rw=[rand]read tests with ioengine={ioengine}")
         passed, failed, skipped = run_fio_tests(TEST_LIST, test_env, args)
