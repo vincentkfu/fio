@@ -17,6 +17,12 @@ main() {
 	1008
 	1018
     )
+    if [ "${CI_TARGET_BUILD}" == "windows-cygwin-32" ]; then
+        # t0023 intermittently exits with STATUS_ACCESS_VIOLATION (3221225477)
+        skip+=(
+            23
+        )
+    fi
     args=(
         --debug
     )
