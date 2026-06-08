@@ -198,7 +198,7 @@ def fio_relpath(target, start):
 
 
 def main():
-    """Run tests using fio's io_uring_cmd ioengine to send NVMe pass through commands."""
+    """Run tests to exercise fio's verify_state_save feature."""
 
     args = parse_args()
 
