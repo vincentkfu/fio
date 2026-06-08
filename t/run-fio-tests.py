@@ -1161,7 +1161,7 @@ TEST_LIST = [
         'exe':              't/verify_state_save.py',
         'parameters':       ['-f', '{fio_path}'],
         'success':          SUCCESS_DEFAULT,
-        'requirements':     [Requirements.not_windows],
+        'requirements':     [],
     },
 ]
 
