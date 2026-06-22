@@ -430,10 +430,28 @@ int fio_nvme_iomgmt_ruhs(struct thread_data *td, struct fio_file *f,
 int fio_nvme_get_info(struct fio_file *f, __u64 *nlba, __u32 pi_act,
 		      struct nvme_data *data);
 
+#define WMODE_SPLIT_MAX	4
+
+struct wmode_split_entry {
+	uint8_t		opcode;
+	uint32_t	cdw12_flag;
+	unsigned int	perc;
+};
+
 int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 			    struct iovec *iov, struct nvme_dsm *dsm,
 			    uint8_t read_opcode, uint8_t write_opcode,
 			    unsigned int cdw12_flags);
+
+int fio_nvme_uring_cmd_prep_split(struct thread_data *td,
+				  struct nvme_uring_cmd *cmd,
+				  struct io_u *io_u, struct iovec *iov,
+				  struct nvme_dsm *dsm, uint8_t read_opcode,
+				  struct wmode_split_entry *wmode_split,
+				  unsigned int wmode_split_nr,
+				  struct frand_state *wmode_state,
+				  unsigned int deac, uint8_t write_opcode,
+				  unsigned int cdw12_flags);
 
 void fio_nvme_pi_fill(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 		      struct nvme_cmd_ext_io_opts *opts);

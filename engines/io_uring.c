@@ -104,13 +104,6 @@ enum uring_cmd_write_mode {
 	FIO_URING_CMD_WMODE_VERIFY,
 };
 
-#define WMODE_SPLIT_MAX	4
-
-struct wmode_split_entry {
-	uint8_t		opcode;
-	uint32_t	cdw12_flag;
-	unsigned int	perc;
-};
 
 enum uring_cmd_verify_mode {
 	FIO_URING_CMD_VMODE_READ = 1,
@@ -781,34 +774,13 @@ static int fio_ioring_cmd_prep(struct thread_data *td, struct io_u *io_u)
 			io_u_set(td, io_u, IO_U_F_VER_IN_DEV);
 		}
 
-		if (o->wmode_split_nr > 1 && io_u->ddir == DDIR_WRITE) {
-			unsigned int rand = rand_between(&ld->wmode_state, 0, 99);
-			unsigned int perc = 0;
-			int i;
-
-			for (i = 0; i < (int)o->wmode_split_nr; i++) {
-				perc += o->wmode_split[i].perc;
-				if (rand < perc) {
-					uint8_t op = o->wmode_split[i].opcode;
-
-					io_u_clear(td, io_u, IO_U_F_TRIMMED | IO_U_F_ZEROED | IO_U_F_ERRORED);
-					if (op == nvme_cmd_write_zeroes) {
-						if (o->deac)
-							io_u_set(td, io_u, IO_U_F_TRIMMED);
-						else
-							io_u_set(td, io_u, IO_U_F_ZEROED);
-					} else if (op == nvme_cmd_write_uncor) {
-						io_u_set(td, io_u, IO_U_F_ERRORED);
-					}
-
-					dprint(FD_IO, "op selected %u\n", op);
-					return fio_nvme_uring_cmd_prep(cmd, io_u,
-						o->nonvectored ? NULL : &ld->iovecs[io_u->index],
-						dsm, read_opcode, op,
-						o->wmode_split[i].cdw12_flag);
-				}
-			}
-		}
+		if (o->wmode_split_nr > 1 && io_u->ddir == DDIR_WRITE)
+			return fio_nvme_uring_cmd_prep_split(td, cmd, io_u,
+					o->nonvectored ? NULL : &ld->iovecs[io_u->index],
+					dsm, read_opcode, o->wmode_split,
+					o->wmode_split_nr, &ld->wmode_state,
+					o->deac, ld->write_opcode,
+					ld->cdw12_flags[io_u->ddir]);
 
 		return fio_nvme_uring_cmd_prep(cmd, io_u,
 				o->nonvectored ? NULL : &ld->iovecs[io_u->index],
