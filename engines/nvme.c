@@ -415,6 +415,46 @@ int fio_nvme_uring_cmd_prep(struct nvme_uring_cmd *cmd, struct io_u *io_u,
 	return 0;
 }
 
+int fio_nvme_uring_cmd_prep_split(struct thread_data *td,
+				  struct nvme_uring_cmd *cmd,
+				  struct io_u *io_u, struct iovec *iov,
+				  struct nvme_dsm *dsm, uint8_t read_opcode,
+				  struct wmode_split_entry *wmode_split,
+				  unsigned int wmode_split_nr,
+				  struct frand_state *wmode_state,
+				  unsigned int deac, uint8_t write_opcode,
+				  unsigned int cdw12_flags)
+{
+	unsigned int rand = rand_between(wmode_state, 0, 99);
+	unsigned int perc = 0;
+	int i;
+
+	for (i = 0; i < (int)wmode_split_nr; i++) {
+		perc += wmode_split[i].perc;
+		if (rand < perc) {
+			uint8_t op = wmode_split[i].opcode;
+
+			io_u_clear(td, io_u, IO_U_F_TRIMMED | IO_U_F_ZEROED | IO_U_F_ERRORED);
+			if (op == nvme_cmd_write_zeroes) {
+				if (deac)
+					io_u_set(td, io_u, IO_U_F_TRIMMED);
+				else
+					io_u_set(td, io_u, IO_U_F_ZEROED);
+			} else if (op == nvme_cmd_write_uncor) {
+				io_u_set(td, io_u, IO_U_F_ERRORED);
+			}
+
+			dprint(FD_IO, "op selected %u\n", op);
+			return fio_nvme_uring_cmd_prep(cmd, io_u, iov, dsm,
+						       read_opcode, op,
+						       wmode_split[i].cdw12_flag);
+		}
+	}
+
+	return fio_nvme_uring_cmd_prep(cmd, io_u, iov, dsm,
+				       read_opcode, write_opcode, cdw12_flags);
+}
+
 void fio_nvme_generate_guard(struct io_u *io_u, struct nvme_cmd_ext_io_opts *opts)
 {
 	struct nvme_data *data = FILE_ENG_DATA(io_u->file);
