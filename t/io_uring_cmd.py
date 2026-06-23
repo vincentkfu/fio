@@ -346,6 +346,21 @@ TEST_LIST = [
             },
         "test_class": FlushTest,
     },
+    #
+    # Run a test with writefua and readfua
+    #
+    {
+        "test_id": 20,
+        "fio_opts": {
+            "rw": 'randrw',
+            "writefua": 1,
+            "readfua": 1,
+            "timebased": 1,
+            "runtime": 3,
+            "output-format": "json",
+            },
+        "test_class": PassThruTest,
+    },
 ]
 
 def parse_args():
