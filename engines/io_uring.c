@@ -1663,8 +1663,8 @@ static int fio_ioring_init(struct thread_data *td)
 		}
 
 	}
-	if (o->md_per_io_size && (!ld->is_uring_cmd_eng ||
-	    (ld->is_uring_cmd_eng && o->cmd_type == FIO_URING_CMD_NVME))) {
+	if ((ld->is_uring_cmd_eng && o->cmd_type == FIO_URING_CMD_NVME) ||
+		!ld->is_uring_cmd_eng) {
 		parse_prchk_flags(o);
 		ext_opts = &ld->ext_opts;
 		if (o->pi_act)
@@ -1720,8 +1720,8 @@ static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 	p += o->md_per_io_size * io_u->index;
 	io_u->mmap_data = p;
 
-	if (o->md_per_io_size && (!ld->is_uring_cmd_eng ||
-	    (ld->is_uring_cmd_eng && o->cmd_type == FIO_URING_CMD_NVME))) {
+	if ((ld->is_uring_cmd_eng && o->cmd_type == FIO_URING_CMD_NVME) ||
+		!ld->is_uring_cmd_eng) {
 		struct nvme_pi_data *pi_data;
 		char *q;
 
