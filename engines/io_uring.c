@@ -1035,19 +1035,11 @@ static inline void fio_ioring_setup_pi(struct thread_data *td,
 				      struct io_u *io_u)
 {
 	struct ioring_data *ld = td->io_ops_data;
-	struct ioring_options *o = td->eo;
-	struct fio_file *f = io_u->file;
 
 	if (io_u->ddir == DDIR_TRIM)
 		return;
 
-	if (o->cmd_type == FIO_URING_CMD_NVME) {
-		fio_nvme_generate_guard(io_u, &ld->ext_opts);
-	}
-	else {
-		td_verror(td, EINVAL, "wrong cmd_type");
-		log_err("%s: This cmd_type does not support generate_guard\n", f->file_name);
-	}
+	fio_nvme_generate_guard(io_u, &ld->ext_opts);
 }
 
 static inline void fio_ioring_cmdprio_prep(struct thread_data *td,
@@ -1663,8 +1655,7 @@ static int fio_ioring_init(struct thread_data *td)
 		}
 
 	}
-	if (o->md_per_io_size && (!ld->is_uring_cmd_eng ||
-	    (ld->is_uring_cmd_eng && o->cmd_type == FIO_URING_CMD_NVME))) {
+	if (!ld->is_uring_cmd_eng || o->cmd_type == FIO_URING_CMD_NVME) {
 		parse_prchk_flags(o);
 		ext_opts = &ld->ext_opts;
 		if (o->pi_act)
@@ -1720,8 +1711,7 @@ static int fio_ioring_io_u_init(struct thread_data *td, struct io_u *io_u)
 	p += o->md_per_io_size * io_u->index;
 	io_u->mmap_data = p;
 
-	if (o->md_per_io_size && (!ld->is_uring_cmd_eng ||
-	    (ld->is_uring_cmd_eng && o->cmd_type == FIO_URING_CMD_NVME))) {
+	if (!ld->is_uring_cmd_eng || o->cmd_type == FIO_URING_CMD_NVME) {
 		struct nvme_pi_data *pi_data;
 		char *q;
 
