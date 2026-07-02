@@ -876,8 +876,16 @@ void setup_log(struct io_log **log, struct log_params *p,
 		struct io_logs *__p;
 
 		__p = calloc(1, sizeof(*l->pending));
-		if (l->td->o.iodepth > DEF_LOG_ENTRIES)
-			def_samples = roundup_pow2(l->td->o.iodepth);
+		/*
+		 * Up to iodepth in-flight IOs can log a sample into the pending
+		 * log before regrow_logs() runs, and get_cur_log() asserts there
+		 * is always room for one more (nr_samples < max_samples), so the
+		 * buffer must be strictly larger than iodepth. roundup_pow2() of
+		 * a power-of-2 iodepth (1024, 2048, ...) returns iodepth itself,
+		 * which overflows and trips the assertion; round up iodepth + 1.
+		 */
+		if (l->td->o.iodepth >= DEF_LOG_ENTRIES)
+			def_samples = roundup_pow2(l->td->o.iodepth + 1);
 		__p->max_samples = def_samples;
 		__p->log = calloc(__p->max_samples, log_entry_sz(l));
 		l->pending = __p;
