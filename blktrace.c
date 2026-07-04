@@ -710,7 +710,7 @@ int merge_blktrace_iologs(struct thread_data *td)
 					     nr_logs);
 	struct blktrace_cursor *bc;
 	FILE *merge_fp;
-	char *str, *ptr, *name, *merge_buf;
+	char *str, *ptr, *name, *merge_buf = NULL;
 	int i, ret;
 
 	ret = init_merge_param_list(td->o.merge_blktrace_scalars, bcs, nr_logs,
@@ -738,7 +738,7 @@ int merge_blktrace_iologs(struct thread_data *td)
 		goto err_out_file;
 	ret = setvbuf(merge_fp, merge_buf, _IOFBF, 128 * 1024);
 	if (ret)
-		goto err_merge_buf;
+		goto err_out_file;
 
 	/* setup input files */
 	str = ptr = strdup(td->o.read_iolog_file);
@@ -800,10 +800,9 @@ err_file:
 	for (i = 0; i < nr_logs; i++) {
 		fclose(bcs[i].f);
 	}
-err_merge_buf:
+err_out_file:
 	fflush(merge_fp);
 	fclose(merge_fp);
-err_out_file:
 	free(merge_buf);
 err_param:
 	free(bcs);
