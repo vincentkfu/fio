@@ -650,7 +650,10 @@ static int __handle_option(const struct fio_option *o, const char *ptr,
 		else
 			ret = check_str_bytes(tmp, &ull, data);
 
-		dprint(FD_PARSE, "  ret=%d, out=%llu\n", ret, ull);
+		if (o->type == FIO_OPT_INT)
+			dprint(FD_PARSE, "  ret=%d, out=%lld\n", ret, ull);
+		else
+			dprint(FD_PARSE, "  ret=%d, out=%llu\n", ret, ull);
 
 		if (ret)
 			break;
