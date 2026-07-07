@@ -889,6 +889,8 @@ static struct io_u *fio_ioring_event(struct thread_data *td, int event)
 
 	if (io_u->ddir == DDIR_TRIM) {
 		ld->async_trim_fail = 1;
+		td->io_ops->flags |= FIO_ASYNCIO_SYNC_TRIM;
+		td_set_ioengine_flags(td);
 		cqe->res = 0;
 	}
 	if (cqe->res > io_u->xfer_buflen)
