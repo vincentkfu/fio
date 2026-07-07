@@ -22,11 +22,18 @@ enum fio_ddir {
 
 static inline const char *io_ddir_name(enum fio_ddir ddir)
 {
-	static const char *name[] = { "read", "write", "trim", "sync",
-					"datasync", "sync_file_range",
-					"wait", };
+	static const char *name[] = {
+		[DDIR_READ] = "read",
+		[DDIR_WRITE] = "write",
+		[DDIR_TRIM] = "trim",
+		[DDIR_SYNC] = "sync",
+		[DDIR_DATASYNC] = "datasync",
+		[DDIR_SYNC_FILE_RANGE] = "sync_file_range",
+		[DDIR_SYNCFS] = "syncfs",
+		[DDIR_WAIT] = "wait",
+	};
 
-	if (ddir >= 0 && ddir < DDIR_LAST)
+	if (ddir >= 0 && ddir < sizeof(name) / sizeof(name[0]) && name[ddir])
 		return name[ddir];
 
 	return "invalid";
