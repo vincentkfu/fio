@@ -625,6 +625,8 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 	struct io_u *io_u;
 	unsigned int i;
 	int ret;
+	static unsigned long long verify_bytes_issued;
+					/* for experimental verify */
 
 	dprint(FD_VERIFY, "starting loop\n");
 
@@ -710,7 +712,7 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 				break;
 			}
 		} else {
-			if (td->bytes_verified + td->o.rw_min_bs > verify_bytes)
+			if (verify_bytes_issued + td->o.rw_min_bs > verify_bytes)
 				break;
 
 			while ((io_u = get_io_u(td)) != NULL) {
@@ -740,6 +742,7 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 						put_io_u(td, io_u);
 						continue;
 					}
+					verify_bytes_issued += io_u->buflen;
 					break;
 				} else if (io_u->ddir == DDIR_WRITE) {
 					io_u->ddir = DDIR_READ;
@@ -750,6 +753,7 @@ static void do_verify(struct thread_data *td, uint64_t verify_bytes)
 						put_io_u(td, io_u);
 						continue;
 					}
+					verify_bytes_issued += io_u->buflen;
 					break;
 				} else {
 					put_io_u(td, io_u);
