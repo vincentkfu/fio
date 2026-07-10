@@ -54,6 +54,13 @@ from fiotestlib import FioExeTest, FioJobFileTest, run_fio_tests
 from fiotestcommon import *
 
 
+def libaio_if_linux():
+    """libaio is required on Linux, but not on other platforms where we use a different AIO engine."""
+    if platform.system() == 'Linux':
+        return Requirements.libaio()
+    return True, "libaio not required on non-Linux"
+
+
 class FioJobFileTest_t0005(FioJobFileTest):
     """Test consists of fio test job t0005
     Confirm that read['io_kbytes'] == write['io_kbytes'] == 102400"""
@@ -1065,7 +1072,7 @@ TEST_LIST = [
         'exe':              't/jsonplus2csv_test.py',
         'parameters':       ['-f', '{fio_path}'],
         'success':          SUCCESS_DEFAULT,
-        'requirements':     [],
+        'requirements':     [libaio_if_linux],
     },
     {
         'test_id':          1012,

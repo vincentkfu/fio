@@ -29,6 +29,13 @@ from fiotestlib import FioJobCmdTest, run_fio_tests
 from fiotestcommon import SUCCESS_DEFAULT, SUCCESS_NONZERO, Requirements
 
 
+def libaio_if_linux():
+    """libaio is required on Linux, but not on other platforms where we use a different AIO engine."""
+    if platform.system() == 'Linux':
+        return Requirements.libaio()
+    return True, "libaio not required on non-Linux"
+
+
 VERIFY_OPT_LIST = [
     'direct',
     'iodepth',
@@ -260,6 +267,7 @@ TEST_LIST_HEADER = [
             },
         "test_class": VerifyTest,
         "success": SUCCESS_DEFAULT,
+        "requirements": [libaio_if_linux],
     },
     {
         # Basic test with iodepth 16
@@ -273,6 +281,7 @@ TEST_LIST_HEADER = [
             },
         "test_class": VerifyTest,
         "success": SUCCESS_DEFAULT,
+        "requirements": [libaio_if_linux],
     },
     {
         # Basic test with 3 files
@@ -286,6 +295,7 @@ TEST_LIST_HEADER = [
             },
         "test_class": VerifyTest,
         "success": SUCCESS_DEFAULT,
+        "requirements": [libaio_if_linux],
     },
     {
         # Basic test with iodepth 16 and 3 files
@@ -300,6 +310,7 @@ TEST_LIST_HEADER = [
             },
         "test_class": VerifyTest,
         "success": SUCCESS_DEFAULT,
+        "requirements": [libaio_if_linux],
     },
 ]
 
@@ -352,6 +363,7 @@ TEST_LIST_CSUM = [
             },
         "test_class": VerifyCSUMTest,
         "success": SUCCESS_NONZERO,
+        "requirements": [libaio_if_linux],
     },
     {
         # basic libaio rand write test
@@ -368,6 +380,7 @@ TEST_LIST_CSUM = [
             },
         "test_class": VerifyCSUMTest,
         "success": SUCCESS_NONZERO,
+        "requirements": [libaio_if_linux],
     },
 ]
 
@@ -392,6 +405,7 @@ TEST_LIST = [
             "verify_backlog_batch": 64,
             },
         "test_class": VerifyTest,
+        "requirements": [libaio_if_linux],
     },
     {
         # norandommap with verify offset and interval
@@ -408,6 +422,7 @@ TEST_LIST = [
             "verify_offset": 1024,
             },
         "test_class": VerifyTest,
+        "requirements": [libaio_if_linux],
     },
     {
         # norandommap with verify offload to async threads
@@ -425,7 +440,8 @@ TEST_LIST = [
             },
         "test_class": VerifyTest,
         "requirements":     [Requirements.not_macos,
-                             Requirements.cpucount4],
+                             Requirements.cpucount4,
+                             libaio_if_linux],
         # mac os does not support CPU affinity
     },
     {
@@ -450,7 +466,8 @@ TEST_LIST = [
             },
         "test_class": VerifyTest,
         "requirements":     [Requirements.not_macos,
-                             Requirements.cpucount4],
+                             Requirements.cpucount4,
+                             libaio_if_linux],
         # mac os does not support CPU affinity
     },
     {
@@ -475,7 +492,8 @@ TEST_LIST = [
             },
         "test_class": VerifyTest,
         "requirements":     [Requirements.not_macos,
-                             Requirements.cpucount4],
+                             Requirements.cpucount4,
+                             libaio_if_linux],
         # mac os does not support CPU affinity
     },
     {
@@ -497,7 +515,8 @@ TEST_LIST = [
             "verify_backlog_batch": 16,
             },
         "test_class": VerifyTest,
-        "requirements":     [Requirements.not_macos,],
+        "requirements":     [Requirements.not_macos,
+                             libaio_if_linux],
         # Skip this test on macOS because it is flaky. With rw=write it can
         # fail to complete even after 10min which prevents the rw=read instance
         # from passing because the read instance depends on the file created by
