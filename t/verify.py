@@ -509,19 +509,15 @@ TEST_LIST = [
             "numjobs": 2,
             "norandommap": 1,
             "bs": 4096,
+            "time_based": 1,
+            "runtime": 30,
             "verify_interval": 2048,
             "verify_offset": 1024,
             "verify_backlog": 16,
             "verify_backlog_batch": 16,
             },
         "test_class": VerifyTest,
-        "requirements":     [Requirements.not_macos,
-                             libaio_if_linux],
-        # Skip this test on macOS because it is flaky. With rw=write it can
-        # fail to complete even after 10min which prevents the rw=read instance
-        # from passing because the read instance depends on the file created by
-        # the write instance. See failure here:
-        # https://github.com/vincentkfu/fio/actions/runs/13683127191/job/38260091800#step:14:258
+        "requirements":     [libaio_if_linux],
     },
 ]
 
