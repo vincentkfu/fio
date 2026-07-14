@@ -378,6 +378,7 @@ struct thread_data {
 	uint64_t io_issues[DDIR_RWDIR_CNT];
 	uint64_t verify_read_issues;
 	uint64_t io_issue_bytes[DDIR_RWDIR_CNT];
+	uint64_t verify_bytes_prepped;
 	uint64_t loops;
 
 	/*
