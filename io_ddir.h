@@ -33,7 +33,7 @@ static inline const char *io_ddir_name(enum fio_ddir ddir)
 		[DDIR_WAIT] = "wait",
 	};
 
-	if (ddir >= 0 && ddir < sizeof(name) / sizeof(name[0]) && name[ddir])
+	if (ddir >= 0 && ddir < (int)(sizeof(name) / sizeof(name[0])) && name[ddir])
 		return name[ddir];
 
 	return "invalid";
