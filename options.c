@@ -34,7 +34,7 @@ static const struct pattern_fmt_desc fmt_desc[] = {
  */
 static char *get_opt_postfix(const char *str)
 {
-	char *p = strstr(str, ":");
+	char *p = (char *)strstr(str, ":");
 
 	if (!p)
 		return NULL;

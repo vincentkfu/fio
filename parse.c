@@ -484,7 +484,7 @@ static size_t opt_len(const char *str)
 
 	size_t prefix_len = strlen(str);
 	for (i = 0; i < FIO_ARRAY_SIZE(delimiter); i++) {
-		postfix = strchr(str, delimiter[i]);
+		postfix = (char *)strchr(str, delimiter[i]);
 		candidate_len = (size_t)(postfix - str);
 		if (postfix && candidate_len < prefix_len)
 			prefix_len = candidate_len;
@@ -799,7 +799,7 @@ store_option_value:
 		** number of digits after period. Find first
 		** period in entire remaining list each time
 		*/
-		cp2 = strchr(ptr, '.');
+		cp2 = (char *)strchr(ptr, '.');
 		if (cp2 != NULL) {
 			int len = 0;
 
@@ -850,7 +850,7 @@ store_option_value:
 					ret = 0;
 					if (vp->cb)
 						fn = vp->cb;
-					rest = strstr(*cp ?: ptr, ":");
+					rest = (char *)strstr(*cp ?: ptr, ":");
 					if (rest) {
 						if (*cp)
 							*rest = '\0';
