@@ -156,8 +156,13 @@ install_rhel_clone() {
 }
 
 install_oracle() {
-    dnf config-manager --set-enabled ol10_codeready_builder
-    install_rhel_clone
+    local ver="${CI_TARGET_OS_VER}"
+    dnf config-manager --set-enabled "ol${ver}_codeready_builder"
+    dnf install -y "oracle-epel-release-el${ver}"
+    install_fedora
+
+    # I could not find a python3-statsmodels package in the repos
+    pip3 install statsmodels
 }
 
 install_alma() {
