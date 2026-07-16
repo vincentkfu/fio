@@ -710,6 +710,7 @@ int fio_show_ioengine_help(const char *engine)
 	struct flist_head *entry;
 	struct thread_data td;
 	struct ioengine_ops *io_ops;
+	char *engine_name;
 	char *sep;
 	int ret = 1;
 
@@ -724,17 +725,21 @@ int fio_show_ioengine_help(const char *engine)
 		}
 		return 0;
 	}
-	sep = strchr(engine, ',');
+	engine_name = strdup(engine);
+	if (!engine_name)
+		return 1;
+	sep = strchr(engine_name, ',');
 	if (sep) {
 		*sep = 0;
 		sep++;
 	}
 
-	td.o.ioengine = (char *)engine;
+	td.o.ioengine = engine_name;
 	td.io_ops = load_ioengine(&td);
 
 	if (!td.io_ops) {
-		log_info("IO engine %s not found\n", engine);
+		log_info("IO engine %s not found\n", engine_name);
+		free(engine_name);
 		return 1;
 	}
 
@@ -744,5 +749,6 @@ int fio_show_ioengine_help(const char *engine)
 		log_info("IO engine %s has no options\n", td.io_ops->name);
 
 	free_ioengine(&td);
+	free(engine_name);
 	return ret;
 }
