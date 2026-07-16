@@ -79,7 +79,8 @@ DPKGCFG
     # Architecture-independent packages and packages for which we don't
     # care about the architecture.
     pkgs+=(
-        python3-scipy
+	python3-six
+	python3-scipy
 	python3-sphinx
 	python3-statsmodels
 	sudo
@@ -113,7 +114,6 @@ install_fedora() {
         kernel-devel
         libaio-devel
         libibverbs-devel
-        libiscsi-devel
         libnbd-devel
         libnfs-devel
         libpmem-devel
@@ -134,6 +134,7 @@ install_fedora() {
                 cunit-devel
                 libgfapi-devel
                 python3-statsmodels
+                libiscsi-devel
             )
             ;;
         "rocky" | "alma" | "oracle")
@@ -141,18 +142,20 @@ install_fedora() {
                 CUnit-devel
                 python-pip
             )
-            ;;&
-        "rocky" | "alma")
-            pkgs+=(
-                glusterfs-api-devel
-            )
             ;;
     esac
     dnf install -y "${pkgs[@]}"
 }
 
 install_rhel_clone() {
-    dnf install -y epel-release
+    if [ "${CI_TARGET_OS}" == "oracle" ]; then
+        local ver
+        ver="$(CI_TARGET_OS_VER)"
+        dnf install -y "oracle-epel-release-el${ver}"
+    else
+        dnf install -y epel-release
+    fi
+
     install_fedora
 
     # I could not find a python3-statsmodels package in the repos
@@ -160,7 +163,9 @@ install_rhel_clone() {
 }
 
 install_oracle() {
-    dnf config-manager --set-enabled ol9_codeready_builder
+    local ver
+    ver="$(CI_TARGET_OS_VER)"
+    dnf config-manager --set-enabled "ol${ver}_codeready_builder"
     install_rhel_clone
 }
 
