@@ -30,6 +30,13 @@ jobs:
         CI_TARGET_OS_VER: ${{ matrix.container.ver }}
 
     steps:
+    - name: Install git
+      run: |
+        if command -v apt-get > /dev/null 2>&1; then
+          apt-get update -qq && apt-get install -y git
+        elif command -v dnf > /dev/null 2>&1; then
+          dnf install -y git
+        fi
     - name: Checkout repo
       uses: actions/checkout@v6
     - name: Install dependencies
