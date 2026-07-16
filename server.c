@@ -2702,7 +2702,7 @@ int fio_server_parse_string(const char *str, char **ptr, bool *is_sock,
 	 * If no port seen yet, check if there's a last ',' at the end
 	 */
 	if (!lport) {
-		portp = strchr(host, ',');
+		portp = (char *)strchr(host, ',');
 		if (portp) {
 			*portp = '\0';
 			portp++;
