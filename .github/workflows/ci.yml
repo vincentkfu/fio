@@ -36,6 +36,9 @@ jobs:
           apt-get update -qq && apt-get install -y git
         elif command -v dnf > /dev/null 2>&1; then
           dnf install -y git
+        else
+          echo "No supported package manager found; cannot install git" >&2
+          exit 1
         fi
     - name: Checkout repo
       uses: actions/checkout@v6
