@@ -34,15 +34,22 @@ static const struct pattern_fmt_desc fmt_desc[] = {
  */
 static char *get_opt_postfix(const char *str)
 {
-	char *p = (char *)strstr(str, ":");
+	const char *colon = strstr(str, ":");
+	char *copy, *p;
 
-	if (!p)
+	if (!colon)
 		return NULL;
 
-	p++;
+	copy = strdup(colon + 1);
+	if (!copy)
+		return NULL;
+
+	p = copy;
 	strip_blank_front(&p);
 	strip_blank_end(p);
-	return strdup(p);
+	p = strdup(p);
+	free(copy);
+	return p;
 }
 
 static bool split_parse_distr(const char *str, double *val, double *center)
