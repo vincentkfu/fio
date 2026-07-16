@@ -38,6 +38,15 @@ main() {
                     ;;
 	    esac
 	    ;;&
+        */linux | */ubuntu | */debian | */fedora)
+            case "${CI_TARGET_ARCH}" in
+                "x86_64")
+                    configure_flags+=(
+                        "--enable-libiscsi"
+                    )
+                    ;;
+            esac
+	    ;;
         */linux | */ubuntu | */debian | */fedora | */alma | */oracle | */rocky)
             case "${CI_TARGET_ARCH}" in
                 "i686")
@@ -46,7 +55,6 @@ main() {
                     ;;
                 "x86_64")
                     configure_flags+=(
-                        "--enable-libiscsi"
                         "--enable-libnbd"
                     )
                     ;;

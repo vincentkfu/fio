@@ -79,7 +79,8 @@ DPKGCFG
     # Architecture-independent packages and packages for which we don't
     # care about the architecture.
     pkgs+=(
-        python3-scipy
+	python3-six
+	python3-scipy
 	python3-sphinx
 	python3-statsmodels
 	sudo
@@ -113,7 +114,6 @@ install_fedora() {
         kernel-devel
         libaio-devel
         libibverbs-devel
-        libiscsi-devel
         libnbd-devel
         libnfs-devel
         libpmem-devel
@@ -134,17 +134,13 @@ install_fedora() {
                 cunit-devel
                 libgfapi-devel
                 python3-statsmodels
+                libiscsi-devel
             )
             ;;
         "rocky" | "alma" | "oracle")
             pkgs+=(
                 CUnit-devel
                 python-pip
-            )
-            ;;&
-        "rocky" | "alma")
-            pkgs+=(
-                glusterfs-api-devel
             )
             ;;
     esac
@@ -160,7 +156,7 @@ install_rhel_clone() {
 }
 
 install_oracle() {
-    dnf config-manager --set-enabled ol9_codeready_builder
+    dnf config-manager --set-enabled ol10_codeready_builder
     install_rhel_clone
 }
 
