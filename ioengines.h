@@ -153,6 +153,6 @@ extern void unregister_ioengine(struct ioengine_ops *);
 extern void free_ioengine(struct thread_data *);
 extern void close_ioengine(struct thread_data *);
 
-extern int fio_show_ioengine_help(const char *engine);
+extern int fio_show_ioengine_help(char *engine);
 
 #endif

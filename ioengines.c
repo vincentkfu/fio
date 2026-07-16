@@ -705,7 +705,7 @@ fio_load_dynamic_engines(struct thread_data *td)
 #define fio_load_dynamic_engines(td) do { } while (0)
 #endif
 
-int fio_show_ioengine_help(const char *engine)
+int fio_show_ioengine_help(char *engine)
 {
 	struct flist_head *entry;
 	struct thread_data td;
@@ -730,7 +730,7 @@ int fio_show_ioengine_help(const char *engine)
 		sep++;
 	}
 
-	td.o.ioengine = (char *)engine;
+	td.o.ioengine = engine;
 	td.io_ops = load_ioengine(&td);
 
 	if (!td.io_ops) {
