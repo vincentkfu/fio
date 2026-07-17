@@ -59,6 +59,9 @@ jobs:
         - build: linux-gcc
           os: ubuntu-26.04
           cc: gcc
+        - build: linux-gcc-arm64
+          os: ubuntu-26.04-arm
+          cc: gcc
         - build: linux-clang
           os: ubuntu-26.04
           cc: clang
