@@ -18,8 +18,6 @@ jobs:
         - {os: 'alma', dh: 'almalinux', ver: '10', target_arch: 'x86_64'}
         - {os: 'oracle', dh: 'oraclelinux', ver: '10', target_arch: 'x86_64'}
         - {os: 'rocky', dh: 'rockylinux/rockylinux', ver: '10', target_arch: 'x86_64'}
-        - {os: 'ubuntu', dh: 'ubuntu', ver: 'resolute', target_arch: 'i686'}
-        - {os: 'ubuntu', dh: 'ubuntu', ver: 'resolute', target_arch: 'x86_64'}
 
     container:
       image: ${{ matrix.container.dh }}:${{ matrix.container.ver }}
