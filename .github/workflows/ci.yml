@@ -63,7 +63,7 @@ jobs:
           os: ubuntu-26.04
           cc: clang
         - build: macos
-          os: macos-15
+          os: macos-26
         - build: linux-i686-gcc
           os: ubuntu-26.04
           arch: i686
