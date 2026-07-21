@@ -63,26 +63,25 @@ jobs:
           - config: ZBD1-5
             device:
             test_cmd: "./t/zbd/run-tests-against-nullb -s 1 -s 2 -s 3 -s 4 -s 5"
-            extra_pkgs: sg3-utils
+            extra_pkgs: sg3-utils util-linux-extra
           - config: ZBD6-10
             device:
             test_cmd: "./t/zbd/run-tests-against-nullb -s 6 -s 7 -s 8 -s 9 -s 10"
-            extra_pkgs: sg3-utils
+            extra_pkgs: sg3-utils util-linux-extra
           - config: ZBD11-15
             device:
             test_cmd: "./t/zbd/run-tests-against-nullb -s 11 -s 12 -s 13 -s 14 -s 15"
-            extra_pkgs: sg3-utils
+            extra_pkgs: sg3-utils util-linux-extra
           - config: ZBD16-20
             device:
             test_cmd: "./t/zbd/run-tests-against-nullb -s 16 -s 17 -s 18 -s 19 -s 20"
-            extra_pkgs: sg3-utils
+            extra_pkgs: sg3-utils util-linux-extra
           - config: ZBD21-25
             device:
             test_cmd: "./t/zbd/run-tests-against-nullb -s 21 -s 22 -s 23 -s 24 -s 25"
-            extra_pkgs: sg3-utils
+            extra_pkgs: sg3-utils util-linux-extra
 
     env:
-      DISTRO: debian-13
       SSHCMD: ssh root@localhost -p 2022
       SCPCMD: scp -P 2022
       CI_TARGET_BUILD: linux
@@ -100,7 +99,6 @@ jobs:
     - name: Create guest VM image
       uses: ./.github/actions/create-guest-image
       with:
-        distro: ${{ env.DISTRO }}
         extra_pkgs: ${{ matrix.extra_pkgs }}
 
     - name: Build and install QEMU
@@ -112,7 +110,6 @@ jobs:
     - name: Start VM
       uses: ./.github/actions/start-vm
       with:
-        image: ${{ env.DISTRO }}.img
         host_key: true
         options: ${{ matrix.device }}
 

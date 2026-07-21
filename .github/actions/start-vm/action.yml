@@ -6,7 +6,8 @@ inputs:
     required: false
     default: "qemu-system-x86_64"
   image: # VM image file
-    required: true
+    required: false
+    default: debian.qcow2
   ssh_fwd_port: # forward this host port to the guest's SSH port
     required: false
     default: 2022
@@ -36,7 +37,7 @@ runs:
       run: |
         ${{ inputs.qemu }} \
           -cpu host \
-          -drive file=${{ inputs.image }},format=raw,if=virtio \
+          -drive file=${{ inputs.image }},format=qcow2,if=virtio \
           -enable-kvm \
           -smp $(nproc) \
           -nographic \

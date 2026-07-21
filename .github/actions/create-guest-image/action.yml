@@ -2,10 +2,10 @@ name: 'Create guest image'
 description: 'Create VM guest image on Ubuntu runner'
 
 inputs:
-  distro:
-    description: 'Linux distribution to use for guest image'
+  image_link:
+    description: 'Link to qcow2 cloud image file'
     required: false
-    default: 'debian-12'
+    default: 'https://cloud.debian.org/images/cloud/forky/daily/latest/debian-14-genericcloud-amd64-daily.qcow2'
   extra_pkgs:
     description: 'Extra packages to install for guest image'
     required: false
@@ -23,14 +23,21 @@ runs:
         sudo chmod 0666 /dev/kvm
         ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
       shell: bash
-    - name: Create Debian image
+    - name: Download cloud image
+      run: wget -q ${{ inputs.image_link }} -O debian.qcow2
+      shell: bash
+    - name: Customize Debian image
       run: |
-        virt-builder ${{ inputs.distro }} \
+        virt-customize -a debian.qcow2 \
           --quiet \
           --hostname fio-tester \
           --ssh-inject root \
           --run-command "ssh-keygen -A" \
-          --run-command "sed -i 's/ens2/enp0s2/g' /etc/network/interfaces" \
+          --run-command "echo 'network:' > /etc/netplan/50-cloud-init.yaml" \
+          --run-command "echo '  version: 2' >> /etc/netplan/50-cloud-init.yaml" \
+          --run-command "echo '  ethernets:' >> /etc/netplan/50-cloud-init.yaml" \
+          --run-command "echo '    enp0s2:' >> /etc/netplan/50-cloud-init.yaml" \
+          --run-command "echo '      dhcp4: true' >> /etc/netplan/50-cloud-init.yaml" \
           --append-line '/etc/environment:PYTHONUNBUFFERED=1' \
           --append-line '/etc/environment:GITHUB_SERVER_URL=${{ github.server_url }}' \
           --append-line '/etc/environment:GITHUB_REPOSITORY=${{ github.repository }}' \
@@ -39,7 +46,6 @@ runs:
           --append-line '/etc/environment:GITHUB_JOB=${{ github.job }}' \
           --append-line '/etc/environment:EXTRA_PKGS=${{ inputs.extra_pkgs }}' \
           --append-line '/etc/environment:CI_TARGET_BUILD=${{ env.CI_TARGET_BUILD }}' \
-          --append-line '/etc/environment:CI_TARGET_OS=${{ env.CI_TARGET_OS }}'
+          --append-line '/etc/environment:CI_TARGET_OS=${{ env.CI_TARGET_OS }}' \
 
       shell: bash
-
