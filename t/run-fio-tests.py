@@ -1171,6 +1171,14 @@ TEST_LIST = [
         'success':          SUCCESS_DEFAULT,
         'requirements':     [],
     },
+    {
+        'test_id':          1025,
+        'test_class':       FioExeTest,
+        'exe':              't/io_uring_pi.py',
+        'parameters':       ['-f', '{fio_path}', '--dut', '{nvmebdev}'],
+        'success':          SUCCESS_DEFAULT,
+        'requirements':     [Requirements.linux, Requirements.nvmebdev],
+    },
 ]
 
 
@@ -1196,6 +1204,8 @@ def parse_args():
                         help='pass-through an argument to an executable test')
     parser.add_argument('--nvmecdev', action='store', default=None,
                         help='NVMe character device for **DESTRUCTIVE** testing (e.g., /dev/ng0n1)')
+    parser.add_argument('--nvmebdev', action='store', default=None,
+                        help='NVMe block device for **DESTRUCTIVE** testing (e.g., /dev/nvme0n1)')
     parser.add_argument('-c', '--cleanup', action='store_true', default=False,
                         help='Delete artifacts for passing tests')
     args = parser.parse_args()
