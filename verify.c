@@ -76,8 +76,13 @@ void fill_verify_pattern(struct thread_data *td, void *p, unsigned int len,
 		return;
 	}
 
-	if (!interval)
-		interval = len;
+	if (!interval) {
+		(void)paste_format(td->o.verify_pattern, td->o.verify_pattern_bytes,
+				   td->o.verify_fmt, td->o.verify_fmt_sz,
+				   p, len, io_u);
+		io_u->buf_filled_len = len;
+		return;
+	}
 
 	io_u->offset += (p - io_u->buf) - (p - io_u->buf) % interval;
 	for (unsigned int bytes_done = 0, bytes_todo = 0; bytes_done < len;
