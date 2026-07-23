@@ -191,6 +191,10 @@ install_linux() {
     install_ubuntu
 }
 
+install_alpine() {
+	apk add git build-base pkgconf zlib-dev numactl-dev cunit-dev libaio-dev linux-headers python3 py3-statsmodels py3-six bash coreutils py3-sphinx
+}
+
 install_macos() {
     # Assumes homebrew and python3 are already installed
     #echo "Updating homebrew..."

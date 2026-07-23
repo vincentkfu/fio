@@ -18,6 +18,7 @@ jobs:
         - {os: 'alma', dh: 'almalinux', ver: '10', target_arch: 'x86_64'}
         - {os: 'oracle', dh: 'oraclelinux', ver: '10', target_arch: 'x86_64'}
         - {os: 'rocky', dh: 'rockylinux/rockylinux', ver: '10', target_arch: 'x86_64'}
+        - {os: 'alpine', dh: 'alpine', ver: 'latest', target_arch: 'x86_64'}
 
     container:
       image: ${{ matrix.container.dh }}:${{ matrix.container.ver }}
@@ -30,6 +31,9 @@ jobs:
     steps:
     - name: Checkout repo
       uses: actions/checkout@v6
+    - name: Install bash on Alpine
+      if: ${{ contains( matrix.container.os, 'alpine' ) }}
+      run: apk add bash
     - name: Install dependencies
       run:  ./ci/actions-install.sh
     - name: Build
