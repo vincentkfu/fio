@@ -28,7 +28,14 @@ import platform
 import argparse
 from pathlib import Path
 from fiotestlib import FioJobCmdTest, run_fio_tests
-from fiotestcommon import SUCCESS_NONZERO
+from fiotestcommon import SUCCESS_NONZERO, Requirements
+
+
+def libaio_if_linux():
+    """libaio is required on Linux, but not on other platforms where we use a different AIO engine."""
+    if platform.system() == 'Linux':
+        return Requirements.libaio()
+    return True, "libaio not required on non-Linux"
 
 
 class VerifyStateSaveTest(FioJobCmdTest):
@@ -229,6 +236,8 @@ def parse_args():
                         help='list of test(s) to skip')
     parser.add_argument('-o', '--run-only', nargs='+', type=int,
                         help='list of test(s) to run, skipping all others')
+    parser.add_argument('-k', '--skip-req', action='store_true',
+                        help='skip requirements checking')
     args = parser.parse_args()
 
     return args
@@ -274,6 +283,12 @@ def main():
 
     total = { 'passed':  0, 'failed': 0, 'skipped': 0 }
     for ioengine in [aio, sync]:
+
+        for test in TEST_LIST:
+            if ioengine == 'libaio':
+                test['requirements'] = [libaio_if_linux]
+            else:
+                test.pop('requirements', None)
 
         #
         # set up tests with verify_state_save=1 to generate verify state save files
