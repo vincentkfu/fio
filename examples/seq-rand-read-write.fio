@@ -1,0 +1,45 @@
+# Basic sequential and random read/write workloads.
+#
+# Sequential workloads transfer 1 GiB using 512 KiB blocks.
+# Random workloads access a 1 GiB file using eight synchronous workers,
+# each transferring 128 MiB (1 GiB aggregate).
+
+[global]
+ioengine=psync
+direct=1
+group_reporting
+
+[seq-read]
+filename=seq-rand-readwrite-seq
+rw=read
+bs=512k
+size=1g
+filesize=1g
+
+[seq-write]
+stonewall
+filename=seq-rand-readwrite-seq
+rw=write
+bs=512k
+size=1g
+filesize=1g
+unlink=1
+
+[rand-read]
+stonewall
+filename=seq-rand-readwrite-rand
+rw=randread
+bs=4k
+numjobs=8
+size=128m
+filesize=1g
+
+[rand-write]
+stonewall
+filename=seq-rand-readwrite-rand
+rw=randwrite
+bs=4k
+numjobs=8
+size=128m
+filesize=1g
+unlink=1
