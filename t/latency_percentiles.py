@@ -82,6 +82,7 @@ import platform
 import subprocess
 from collections import Counter
 from pathlib import Path
+from fiotestcommon import Requirements
 
 
 class FioLatTest():
@@ -1006,6 +1007,9 @@ def main():
 
     args = parse_args()
 
+    fio_root = str(Path(__file__).absolute().parent.parent)
+    Requirements(fio_root, args)
+
     artifact_root = args.artifact_root if args.artifact_root else \
         "latency-test-{0}".format(time.strftime("%Y%m%d-%H%M%S"))
     os.mkdir(artifact_root)
@@ -1364,6 +1368,10 @@ def main():
              ('cmdprio_percentage' in test or 'cmdprio_bssplit' in test):
             skipped = skipped + 1
             outcome = 'SKIPPED (Linux root required for cmdprio tests)'
+        elif test['ioengine'] == 'libaio' and platform.system() == 'Linux' and \
+             not Requirements.libaio()[0]:
+            skipped = skipped + 1
+            outcome = 'SKIPPED (libaio required)'
         else:
             test_obj = test['test_obj'](artifact_root, test, args.debug)
             status = test_obj.run_fio(fio)
