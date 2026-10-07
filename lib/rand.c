@@ -95,6 +95,9 @@ void init_rand_seed(struct frand_state *state, uint64_t seed, bool use64)
 		__init_rand64(&state->state64, seed);
 }
 
+/* Standard 64-bit LCG using Golden Ratio and a prime Weyl increment */
+#define LCG_INCREMENT 0xda3e39cb94b95bdbULL
+
 void __fill_random_buf_small(void *buf, unsigned int len, uint64_t seed)
 {
 	uint64_t *b = buf;
@@ -103,7 +106,7 @@ void __fill_random_buf_small(void *buf, unsigned int len, uint64_t seed)
 
 	for (; b != e; ++b) {
 		*b = seed;
-		seed = __hash_u64(seed);
+		seed = __hash_u64(seed) + LCG_INCREMENT;
 	}
 
 	if (fio_unlikely(rest))
@@ -134,7 +137,7 @@ void __fill_random_buf(void *buf, unsigned int len, uint64_t seed)
 	for (; b != e; b += CONFIG_SEED_BUCKETS) {
 		for (p = 0; p < CONFIG_SEED_BUCKETS; ++p) {
 			b[p] = s[p];
-			s[p] = __hash_u64(s[p]);
+			s[p] = __hash_u64(s[p]) + LCG_INCREMENT;
 		}
 	}
 
