@@ -150,7 +150,7 @@ jobs:
         cd ..\..
 
     - name: Upload installer as artifact (Windows)
-      if: ${{ contains( matrix.build, 'windows' ) }}
+      if: ${{ startsWith(matrix.build, 'windows-cygwin') }}
       uses: actions/upload-artifact@v6
       with:
         name: ${{ matrix.build }}-installer
