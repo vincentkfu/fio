@@ -327,11 +327,12 @@ class FioJobCmdTest(FioExeTest):
         # skipping outside the first { and last }
         #
         lines = file_data.splitlines()
-        last = len(lines) - lines[::-1].index("}")
-        file_data = '\n'.join(lines[lines.index("{"):last])
         try:
+            first = lines.index("{")
+            last = len(lines) - lines[::-1].index("}")
+            file_data = '\n'.join(lines[first:last])
             self.json_data = json.loads(file_data)
-        except json.JSONDecodeError:
+        except (ValueError, json.JSONDecodeError):
             return False
 
         return True
