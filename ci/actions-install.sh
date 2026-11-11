@@ -97,7 +97,7 @@ DPKGCFG
     fi
 
     echo "Updating APT..."
-    _sudo apt-get -qq update
+    _sudo apt-get -o Acquire::Retries=3 -o APT::Update::Error-Mode=any -qq update
     echo "Installing packages... ${pkgs[@]}"
     _sudo apt-get install -o APT::Immediate-Configure=false --no-install-recommends -qq -y "${pkgs[@]}"
 }
